@@ -4,12 +4,15 @@ import math
 import numpy as np
 from qiskit import *
 from qiskit.circuit.library import *
+import matplotlib.pyplot as plt
 
-def qunion(*qregs : QuantumRegister):
+
+def qunion(*qregs: QuantumRegister):
     res = []
     for r in qregs:
         res += r._bits
     return res
+
 
 # CONVERTER
 class Converter:
@@ -85,7 +88,7 @@ class Circuit:
             qc.x(pos[to_change])
             # Set CX-Gate
             for n in range(c_qb):
-                new_pixel = pixel >> (8-color_num)
+                new_pixel = pixel >> (8 - color_num)
                 bit = (new_pixel >> n) & 1
                 if bit == 1:
                     qc.mcx(pos, c[n])
@@ -232,11 +235,11 @@ class Circuit:
         circuit.append(neqr, qunion(c, y, x))
         circuit.append(swp, qunion(c, a9))
         # Reset
-        if verbose : print("Restoring...")
+        if verbose: print("Restoring...")
         circuit.append(cs_w, qunion(y))
         circuit.append(cs_a, qunion(x))
         # RETURN
-        if verbose : print("Done!")
+        if verbose: print("Done!")
         return circuit
 
     @staticmethod
@@ -341,7 +344,7 @@ class Circuit:
                 circuit.x(a[i])
                 circuit.mcx([a[i], b[i]] + add, res[1])
                 circuit.x(a[i])
-            #circuit.barrier()
+            # circuit.barrier()
         # RETURN
         return circuit
 
@@ -421,8 +424,60 @@ class Circuit:
         # RETURN
         return circuit
 
+
 # QUANTUM MEDIAN FILTER
-class QuantumMedianFilter(QuantumCircuit):
-    pass
+class QuantumMedianFilter:
+
+    circuit = None
+
+    def __init__(self, img: np.array, color_size=8):
+        # PARAMETERS
+        x_range = img.shape[1]  # X size
+        y_range = img.shape[0]  # Y size
+        col_qb = color_size  # Size of color register
+        pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
+        anc_qb = (col_qb - 1) * 2
+        # QUANTUM REGISTERS
+        c = QuantumRegister(col_qb, "c")  # Color
+        x = QuantumRegister(pos_qb, "x")  # X coordinates
+        y = QuantumRegister(pos_qb, "y")  # Y coordinates
+        a1 = QuantumRegister(col_qb, "a1_")  # Neighbor 1 (up)
+        a2 = QuantumRegister(col_qb, "a2_")  # Neighbor 2 (left)
+        a3 = QuantumRegister(col_qb, "a3_")  # Neighbor 3 (center)
+        a4 = QuantumRegister(col_qb, "a4_")  # Neighbor 4 (right)
+        a5 = QuantumRegister(col_qb, "a5_")  # Neighbor 5 (down)
+        e = AncillaRegister(2, "e")
+        anc = AncillaRegister(anc_qb, "anc")
+        # CLASSICAL REGISTERS
+        cm = ClassicalRegister(col_qb, "cm")  # Color Measurement (2)
+        xm = ClassicalRegister(pos_qb, "xm")  # X Measurement (1)
+        ym = ClassicalRegister(pos_qb, "ym")  # Y Measurement (0)
+        # MAIN CIRCUIT
+        circuit = QuantumCircuit(c, y, x, a1, a2, a3, a4, a5, e, anc, cm, ym, xm, name="QMF4x4")
+        # CIRCUITS
+        prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=True)
+        mmm = Circuit.min_med_max_5(col_qb)
+        # COMPOSITING
+        circuit.compose(prep, qunion(c, y, x, a1, a2, a3, a4, a5), inplace=True)
+        circuit.barrier()
+        circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, e, anc), inplace=True)
+        self.circuit = circuit
+
 
 # SIMULATOR
+
+# PRINTING
+def print_circuit(circuit, filename: str = None):
+    style = {
+        'displaycolor': {
+            "NEQR": "#FF33FF",
+            "CS+": "#FF0000",
+            "CS-": "#FF8888",
+            "SWAP": "#AAAAFF"
+        },
+        'fontsize': 8
+    }
+    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
+    if filename is not None:
+        plt.savefig(filename)
+    plt.show()
