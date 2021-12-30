@@ -104,7 +104,7 @@ sim = AerSimulator(method="matrix_product_state", matrix_product_state_max_bond_
 #print(f"COUNT OPS: {c.count_ops()}")
 #print(f"DEPTH OPT: {c.depth()}")
 # RUN
-run = True
+run = False
 t1 = time.time()
 if run:
     print("Quantifico!")
