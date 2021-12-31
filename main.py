@@ -25,30 +25,37 @@ circuit_dir = "./images/circuits/"
 images = dict()
 images["TEST_2x2"] = "gray_2.png"
 images["TEST_4x4"] = "gray_4.png"
+images["TEST_8x8"] = "gray_8.png"
 images["CHAPLIN"] = "chaplin_64.png"
-filename = images["TEST_4x4"]  # Change This One
+filename = images["TEST_8x8"]  # Change This One
 color_size = 3
 # CONVERSION
+print("Converting image into array")
 img = Converter.to_array(f'{input_dir}{filename}')
 # CIRCUIT
+print("Building the circuit")
 qmf = QuantumMedianFilter(img, color_size)
 # VISUALIZATION
+print("Visualization of the circuit")
 print_circuit(qmf.circuit)
 # RUN
-sim = AerSimulator(method="matrix_product_state", matrix_product_state_max_bond_dimension=16)
-c = transpile(qmf.circuit, sim, optimization_level=3)
-run = False
-t1 = time.time()
+run = True
 if run:
-    print("Quantifico!")
-    shots = 512
-    #sim = AerSimulator(method="statevector")
-    qobj = transpile(c, sim)
+    print("Setting simulator up")
+    sim = AerSimulator(method="matrix_product_state", matrix_product_state_max_bond_dimension=32)
+    qobj = transpile(qmf.circuit, sim, optimization_level=3)
+    print("Running")
+    t1 = time.time()
+    shots = 2048
     results = sim.run(qobj, shots=shots).result()
     answer = results.get_counts()
     t2 = time.time()
     total =t2 - t1
-    print(f"TOTAL TIME:{total}")
+    print("---RESULTS---")
+    print("")
+    print(f"Time:{total}")
+    print(f"Integrity:{len(answer)}")
+    print(f"Integrity:{len(answer)}")
     print(answer)
     for measure in answer:
         m = re.compile(r'\W+').split(measure)

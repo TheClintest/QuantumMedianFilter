@@ -455,14 +455,18 @@ class QuantumMedianFilter:
         # MAIN CIRCUIT
         circuit = QuantumCircuit(c, y, x, a1, a2, a3, a4, a5, e, anc, cm, ym, xm, name="QMF4x4")
         # CIRCUITS
-        prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=True)
+        prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=False)
         mmm = Circuit.min_med_max_5(col_qb)
         # COMPOSITING
         circuit.compose(prep, qunion(c, y, x, a1, a2, a3, a4, a5), inplace=True)
         circuit.barrier()
         circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, e, anc), inplace=True)
+        # MEASUREMENT
+        circuit.measure(a3, cm)
+        circuit.measure(y, ym)
+        circuit.measure(x, xm)
+        #
         self.circuit = circuit
-
 
 # SIMULATOR
 
