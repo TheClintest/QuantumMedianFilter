@@ -1,9 +1,12 @@
 # IMPORTS
 from PIL import Image
 import math
+import time
+import re
 import numpy as np
 from qiskit import *
 from qiskit.circuit.library import *
+from qiskit.providers.aer import *
 import matplotlib.pyplot as plt
 
 
@@ -20,15 +23,52 @@ class Converter:
     # IMAGE CONVERTER
     @staticmethod
     def to_array(filename):
-        """Converts a PNG image into a greyscale representation. Returns a NumPy array instance of it"""
+        """
+        Converts a PNG image into a greyscale representation. Returns a NumPy array instance of it
+        :param filename: Path of input image
+        :return: A NumPy array representing input image
+        """
         return np.array(Image.open(filename).convert("L"))
 
     # ARRAY CONVERTER
     @staticmethod
     def to_image(array, filename):
-        """Converts a Numpy array into a PNG image and saves it as given filename"""
+        """
+        Converts a Numpy array into a PNG image and saves it as given filename
+        :param array: Input image array
+        :param filename: Path of output image
+        :return:
+        """
         new_image = Image.fromarray(array)
         new_image.save(filename)
+
+    # SIMULATION CONVERTER
+    @staticmethod
+    def decode_image(answer: dict, filename="output.png", color_size=8):
+        """
+        Process simulator's results to be decoded into an image
+        :param answer: Simulator results
+        :param filename: Path for the output image (default: ./output.png)
+        :param color_size: Size of color registers. Use the value given for the simulated circuit
+        """
+        # Preparation
+        first_el = list(answer.keys())[0]
+        temp = re.compile(r'\W+').split(first_el)
+        first_el = temp[0]
+        size = len(first_el)**2
+        array = np.zeros(shape=(size, size))
+        # Processing
+        for measure in answer:
+            m = re.compile(r'\W+').split(measure)
+            x_coord = int(m[0], 2)
+            y_coord = int(m[1], 2)
+            val = int(m[2], 2)
+            val = val << (8 - color_size)
+            array[y_coord][x_coord] = val
+            print("Inserting %d at x:%d y:%d" % (val, x_coord, y_coord))
+        # Output
+        Converter.to_image(array, filename)
+
 
 
 # CIRCUITS
@@ -45,10 +85,10 @@ class Circuit:
     @staticmethod
     def neqr(imageArray, color_num=8, verbose=False):
         """
-                Encodes the loaded array into a NEQR circuit
-                :param imageArray: A NumPy Array encoding the input image. To create one, use Converter.to_array(...)
-                :param verbose: Prints out encoding phase.
-                :return: A QuantumCircuit class, encoding the NEQR image
+        Encodes the loaded array into a NEQR circuit
+        :param imageArray: A NumPy Array encoding the input image. To create one, use Converter.to_array(...)
+        :param verbose: Prints out encoding phase.
+        :return: A QuantumCircuit class, encoding the NEQR image
         """
 
         # PARAMETERS
@@ -119,23 +159,50 @@ class Circuit:
 
     @staticmethod
     def cycleshift_w(size):
+        """
+        A CycleShift module. Translates Y coordinate up.
+        :param size: Size of coordinate's register
+        :return: A QuantumCircuit implementing the module
+        """
         return Circuit.__counter(size, 'y', add=False, module_name="CS-")
 
     @staticmethod
     def cycleshift_a(size):
+        """
+        A CycleShift module. Translates X coordinate left.
+        :param size: Size of coordinate's register
+        :return: A QuantumCircuit implementing the module
+        """
         return Circuit.__counter(size, 'x', add=False, module_name="CS-")
 
     @staticmethod
     def cycleshift_s(size):
+        """
+        A CycleShift module. Translates Y coordinate down.
+        :param size: Size of coordinate's register
+        :return: A QuantumCircuit implementing the module
+        """
         return Circuit.__counter(size, 'y', module_name="CS+")
 
     @staticmethod
     def cycleshift_d(size):
+        """
+        A CycleShift module. Translates X coordinate right.
+        :param size: Size of coordinate's register
+        :return: A QuantumCircuit implementing the module
+        """
         return Circuit.__counter(size, 'x', module_name="CS+")
 
     # Swap Module
     @staticmethod
     def swap(size, a_name="a", b_name="b"):
+        """
+        A Swap module. Swaps the value of two given registers
+        :param size: Size of registers
+        :param a_name: Name of the first register
+        :param b_name: Name of the second register
+        :return: A QuantumCircuit implementing the module
+        """
         a = QuantumRegister(size, a_name)
         b = QuantumRegister(size, b_name)
         circuit = QuantumCircuit(a, b, name="SWAP")
@@ -146,6 +213,13 @@ class Circuit:
     # Parallel Controlled-NOT Module
     @staticmethod
     def parallel_controlled_not(size, a_name="a", b_name="b"):
+        """
+        A Parallel Controlled-NOT module. Copy the value of a given register into another
+        :param size: Size of registers
+        :param a_name: Name of the original register
+        :param b_name: Name of the target register
+        :return: A QuantumCircuit implementing the module
+        """
         a = QuantumRegister(size, a_name)
         b = QuantumRegister(size, b_name)
         circuit = QuantumCircuit(a, b, name="Parallel Controlled-NOT")
@@ -155,11 +229,26 @@ class Circuit:
 
     @staticmethod
     def pcn(size, a_name="a", b_name="b"):
+        """
+        A Parallel Controlled-NOT module. Copy the value of a given register into another
+        :param size: Size of registers
+        :param a_name: Name of the original register
+        :param b_name: Name of the target register
+        :return: A QuantumCircuit implementing the module
+        """
         return Circuit.parallel_controlled_not(size, a_name, b_name)
 
     # Neighborhood Preparation
     @staticmethod
-    def neighborhood_prep(img, color_num=8, verbose=False):
+    def neighborhood_prep(img: np.array, color_num=8, verbose=False):
+        """
+        This module process a given image to be prepared for further processing.
+        It actually stores a 3x3 mask of the given image on 9 ancillary registers.
+        :param img: A NumPy array representing the image
+        :param color_num: Size of the color registers
+        :param verbose: For debug usage
+        :return: A QuantumCircuit implementing the module
+        """
         # PARAMETERS
         x_range = img.shape[1]  # X size
         y_range = img.shape[0]  # Y size
@@ -244,6 +333,14 @@ class Circuit:
 
     @staticmethod
     def neighborhood_prep_less(img, color_num=8, verbose=False):
+        """
+        This module process a given image to be prepared for further processing.
+        It actually stores direct neighbors of a pixel of the given image on 5 ancillary registers.
+        :param img: A NumPy array representing the image
+        :param color_num: Size of the color registers
+        :param verbose: For debug usage
+        :return: A QuantumCircuit implementing the module
+        """
         # PARAMETERS
         x_range = img.shape[1]  # X size
         y_range = img.shape[0]  # Y size
@@ -308,6 +405,18 @@ class Circuit:
     # Comparator
     @staticmethod
     def comparator(size, a_name="a", b_name="b", res_name="e"):
+        """
+        This module compares the binary encoding of two registers and stores the result on a third register.
+        The result register can result in:
+            00: equal
+            01: A greater than B
+            10: B greater than A
+        :param size: Size of the registers
+        :param a_name: Name of the first register
+        :param b_name: Name of the second register
+        :param res_name: Name of the result register
+        :return: A QuantumCircuit implementing the module
+        """
         # REGISTERS
         anc_qb = (size - 1) * 2
         a = QuantumRegister(size, a_name)
@@ -351,6 +460,15 @@ class Circuit:
     # Swapper
     @staticmethod
     def swapper(size, a_name="a", b_name="b"):
+        """
+        A Swapper is a composite module which "swaps" two registers based on their binary encoding:
+            A > B   --> SWAP
+            A <= B  --> PASS
+        :param size: Size of the register
+        :param a_name: Name of the first register
+        :param b_name: Name of the second register
+        :return: A QuantumCircuit implementing the module
+        """
         # REGISTERS
         anc_qb = (size - 1) * 2
         a = QuantumRegister(size, a_name)
@@ -369,6 +487,14 @@ class Circuit:
     # Sort Module
     @staticmethod
     def sort(size, a_name="a", b_name="b", c_name="c"):
+        """
+        This module sorts a set of three registers.
+        :param size: Size of the registers
+        :param a_name: Name of the first register
+        :param b_name: Name of the second register
+        :param c_name: Name of the third register
+        :return: A QuantumCircuit implementing the module
+        """
         # REGISTERS
         anc_qb = (size - 1) * 2
         a = QuantumRegister(size, a_name)
@@ -403,6 +529,11 @@ class Circuit:
 
     @staticmethod
     def min_med_max_5(size):
+        """
+        A module which sorts its input, which median is finally stored in the center register.
+        :param size: Size of the registers
+        :return: A QuantumCircuit implementing the module
+        """
         # REGISTERS
         anc_qb = (size - 1) * 2
         a1 = QuantumRegister(size, "a1")
@@ -427,10 +558,25 @@ class Circuit:
 
 # QUANTUM MEDIAN FILTER
 class QuantumMedianFilter:
+    """
+    A Quantum Median Filter.
+    OUTPUT: X Y C
+    X is a binary representation of pixel horizontal coordinate
+    Y is a binary representation of pixel vertical coordinate
+    C is a binary representation of pixel median value
+    """
 
     circuit = None
 
-    def __init__(self, img: np.array, color_size=8):
+    def __init__(self):
+        pass
+
+    def prepare_5(self, img: np.array, color_size=8):
+        """
+        Prepare the circuit
+        :param img: A NumPy image representation
+        :param color_size: Size of the color registers (defult: 8)
+        """
         # PARAMETERS
         x_range = img.shape[1]  # X size
         y_range = img.shape[0]  # Y size
@@ -457,21 +603,76 @@ class QuantumMedianFilter:
         # CIRCUITS
         prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=False)
         mmm = Circuit.min_med_max_5(col_qb)
+        swp = Circuit.swap(col_qb)
         # COMPOSITING
         circuit.compose(prep, qunion(c, y, x, a1, a2, a3, a4, a5), inplace=True)
         circuit.barrier()
         circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, e, anc), inplace=True)
+        circuit.barrier()
+        circuit.compose(swp, qunion(c, a3), inplace=True)
+        circuit.barrier()
         # MEASUREMENT
-        circuit.measure(a3, cm)
+        circuit.measure(c, cm)
         circuit.measure(y, ym)
         circuit.measure(x, xm)
         #
         self.circuit = circuit
 
+    def get(self):
+        """
+        If prepared, returns the Quantum Median Filter module
+        :return: A QuantumCircuit implementing the module
+        """
+
+
 # SIMULATOR
+class Simulator:
+    """
+    An Aer Simulator for experimentation.
+    Default setting is "matrix_product_state"
+    """
+
+    def __init__(self, mps_max_bond_dimension: int = None):
+        if mps_max_bond_dimension is not None:
+            self.simulator = AerSimulator(method="matrix_product_state",
+                                          matrix_product_state_max_bond_dimension=mps_max_bond_dimension)
+        else:
+            self.simulator = AerSimulator(method="matrix_product_state")
+
+    def simulate(self, circuit: QuantumCircuit, shots=1024, optimization=0, verbose=False):
+        """
+        Simulate experiment
+        :param circuit: A quantum circuit to execute
+        :param shots: Number of experiments
+        :param optimization: Optimization level for transpiler (0 to 3)
+        :param verbose: Debug printing
+        :return: A dictionary with all results.
+        """
+        if verbose: print("Transpiling...")
+        qobj = transpile(circuit, self.simulator, optimization_level=optimization)
+        t1 = time.time()
+        if verbose: print("Running...")
+        results = self.simulator.run(qobj, shots=shots).result()
+        answer = results.get_counts()
+        t2 = time.time()
+        total = t2 - t1
+        if verbose:
+            print("---RESULTS---")
+            print("")
+            print(f"Time:{total}")
+            print(f"Integrity:{len(answer)}")
+            print(answer)
+        return answer
+
 
 # PRINTING
 def print_circuit(circuit, filename: str = None):
+    """
+    Prints out a representation of a given circuit.
+    If "filename" is provided, it saves the visualization in the file system.
+    :param circuit: Input circuit to visualize
+    :param filename: Path for the output
+    """
     style = {
         'displaycolor': {
             "NEQR": "#FF33FF",
