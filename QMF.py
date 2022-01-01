@@ -55,7 +55,7 @@ class Converter:
         first_el = list(answer.keys())[0]
         temp = re.compile(r'\W+').split(first_el)
         first_el = temp[0]
-        size = len(first_el)**2
+        size = 2**(len(first_el))
         array = np.zeros(shape=(size, size))
         # Processing
         for measure in answer:
