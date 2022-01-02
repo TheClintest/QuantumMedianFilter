@@ -44,19 +44,13 @@ class Converter:
 
     # SIMULATION CONVERTER
     @staticmethod
-    def decode_image(answer: dict, filename="output.png", color_size=8):
+    def decode_image(answer: dict, target_array, color_size=8):
         """
         Process simulator's results to be decoded into an image
         :param answer: Simulator results
-        :param filename: Path for the output image (default: ./output.png)
+        :param target_array: Array for storing result. Use one of the same shape used for encoding
         :param color_size: Size of color registers. Use the value given for the simulated circuit
         """
-        # Preparation
-        first_el = list(answer.keys())[0]
-        temp = re.compile(r'\W+').split(first_el)
-        first_el = temp[0]
-        size = 2**(len(first_el))
-        array = np.zeros(shape=(size, size))
         # Processing
         for measure in answer:
             m = re.compile(r'\W+').split(measure)
@@ -64,10 +58,10 @@ class Converter:
             y_coord = int(m[1], 2)
             val = int(m[2], 2)
             val = val << (8 - color_size)
-            array[y_coord][x_coord] = val
-            print("Inserting %d at x:%d y:%d" % (val, x_coord, y_coord))
+            target_array[y_coord][x_coord] = val
+            # print("Inserting %d at x:%d y:%d" % (val, x_coord, y_coord))
         # Output
-        Converter.to_image(array, filename)
+        return target_array
 
 
 
@@ -99,14 +93,14 @@ class Circuit:
         n_qb = int(math.ceil(math.log(size, 2)))  # Size of position registers
         # REGISTERS
         c = QuantumRegister(c_qb, "c")
-        x = QuantumRegister(n_qb, "x")
-        y = QuantumRegister(n_qb, "y")
-        pos = QuantumRegister(bits=qunion(x, y))  # Useful for mcx
-        qc = QuantumCircuit(c, y, x, name="NEQR")
+        x_coor = QuantumRegister(n_qb, "x_coor_")
+        y_coor = QuantumRegister(n_qb, "y_coor_")
+        pos = QuantumRegister(bits=qunion(x_coor, y_coor))  # Useful for mcx
+        qc = QuantumCircuit(c, y_coor, x_coor, name="NEQR")
         # ENCODING
         # Initialize position registers
-        qc.x(x)
-        qc.x(y)
+        qc.x(x_coor)
+        qc.x(y_coor)
         # First barrier
         qc.barrier()
         # Encoding colors
@@ -137,8 +131,8 @@ class Circuit:
         # Set last barrier
         qc.barrier()
         # Reset coordinates
-        qc.x(x)
-        qc.x(y)
+        qc.x(x_coor)
+        qc.x(y_coor)
         # RETURN
         return qc
 
@@ -568,9 +562,6 @@ class QuantumMedianFilter:
 
     circuit = None
 
-    def __init__(self):
-        pass
-
     def prepare_5(self, img: np.array, color_size=8):
         """
         Prepare the circuit
@@ -585,8 +576,8 @@ class QuantumMedianFilter:
         anc_qb = (col_qb - 1) * 2
         # QUANTUM REGISTERS
         c = QuantumRegister(col_qb, "c")  # Color
-        x = QuantumRegister(pos_qb, "x")  # X coordinates
-        y = QuantumRegister(pos_qb, "y")  # Y coordinates
+        x_coord = QuantumRegister(pos_qb, "x_coord_")  # X coordinates
+        y_coord = QuantumRegister(pos_qb, "y_coord_")  # Y coordinates
         a1 = QuantumRegister(col_qb, "a1_")  # Neighbor 1 (up)
         a2 = QuantumRegister(col_qb, "a2_")  # Neighbor 2 (left)
         a3 = QuantumRegister(col_qb, "a3_")  # Neighbor 3 (center)
@@ -599,13 +590,13 @@ class QuantumMedianFilter:
         xm = ClassicalRegister(pos_qb, "xm")  # X Measurement (1)
         ym = ClassicalRegister(pos_qb, "ym")  # Y Measurement (0)
         # MAIN CIRCUIT
-        circuit = QuantumCircuit(c, y, x, a1, a2, a3, a4, a5, e, anc, cm, ym, xm, name="QMF4x4")
+        circuit = QuantumCircuit(c, y_coord, x_coord, a1, a2, a3, a4, a5, e, anc, cm, ym, xm, name="QMF4x4")
         # CIRCUITS
         prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=False)
         mmm = Circuit.min_med_max_5(col_qb)
         swp = Circuit.swap(col_qb)
         # COMPOSITING
-        circuit.compose(prep, qunion(c, y, x, a1, a2, a3, a4, a5), inplace=True)
+        circuit.compose(prep, qunion(c, y_coord, x_coord, a1, a2, a3, a4, a5), inplace=True)
         circuit.barrier()
         circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, e, anc), inplace=True)
         circuit.barrier()
@@ -613,8 +604,8 @@ class QuantumMedianFilter:
         circuit.barrier()
         # MEASUREMENT
         circuit.measure(c, cm)
-        circuit.measure(y, ym)
-        circuit.measure(x, xm)
+        circuit.measure(y_coord, ym)
+        circuit.measure(x_coord, xm)
         #
         self.circuit = circuit
 
@@ -623,6 +614,7 @@ class QuantumMedianFilter:
         If prepared, returns the Quantum Median Filter module
         :return: A QuantumCircuit implementing the module
         """
+        return self.circuit
 
 
 # SIMULATOR
@@ -632,6 +624,8 @@ class Simulator:
     Default setting is "matrix_product_state"
     """
 
+    simulator = None
+
     def __init__(self, mps_max_bond_dimension: int = None):
         if mps_max_bond_dimension is not None:
             self.simulator = AerSimulator(method="matrix_product_state",
@@ -639,20 +633,32 @@ class Simulator:
         else:
             self.simulator = AerSimulator(method="matrix_product_state")
 
-    def simulate(self, circuit: QuantumCircuit, shots=1024, optimization=0, verbose=False):
+    def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None):
+        """
+        Transpile circuit
+        :param circuit:
+        :param optimization: Optimization level for transpiler (0 to 3)
+        :param qasm_filename: If path is given, transpiled qobj will be saved as QASM string on file
+        :return: Transpiled circuit
+        """
+        print(f'Transpiling {circuit.name}')
+        qobj = transpile(circuit, self.simulator, optimization_level=optimization)
+        if qasm_filename is not None:
+            print(f'Saving circuit as {qasm_filename}')
+            qobj.qasm(filename=qasm_filename)
+        return qobj
+
+    def simulate(self, circuit: QuantumCircuit, shots=1024, verbose=False):
         """
         Simulate experiment
         :param circuit: A quantum circuit to execute
         :param shots: Number of experiments
-        :param optimization: Optimization level for transpiler (0 to 3)
         :param verbose: Debug printing
         :return: A dictionary with all results.
         """
-        if verbose: print("Transpiling...")
-        qobj = transpile(circuit, self.simulator, optimization_level=optimization)
+        print(f'Simulating qobj {circuit.name}')
         t1 = time.time()
-        if verbose: print("Running...")
-        results = self.simulator.run(qobj, shots=shots).result()
+        results = self.simulator.run(circuit, shots=shots).result()
         answer = results.get_counts()
         t2 = time.time()
         total = t2 - t1
