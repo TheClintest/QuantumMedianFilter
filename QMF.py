@@ -10,12 +10,150 @@ from qiskit.providers.aer import *
 import matplotlib.pyplot as plt
 
 
+# UTILITY
 def qunion(*qregs: QuantumRegister):
+    """
+    This function returns a list of qubits by their own register variables, useful for Qiskit methods
+    :param qregs: Input quantum register
+    :return: A list of qubits, ordered by given args
+    """
     res = []
     for r in qregs:
         res += r._bits
     return res
 
+
+def print_circuit(circuit, filename: str = None):
+    """
+    Prints out a representation of a given circuit.
+    If "filename" is provided, it saves the visualization in the file system.
+    :param circuit: Input circuit to visualize
+    :param filename: Path for the output
+    """
+    style = {
+        'displaycolor': {
+            "NEQR": "#FF33FF",
+            "CS+": "#FF0000",
+            "CS-": "#FF8888",
+            "SWAP": "#AAAAFF"
+        },
+        'fontsize': 8
+    }
+    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
+    if filename is not None:
+        plt.savefig(filename)
+    plt.show()
+
+
+# QASM
+def load_qasm(filename, verbose=True):
+    """
+    Load a QASM string from a path, returning the corresponding circuit
+    :param filename: Path to QASM file
+    :param verbose: Prints out debug info
+    :return: A QuantumCircuit described in the file
+    """
+    t1 = time.time()
+    circ = QuantumCircuit.from_qasm_file(filename)
+    t2 = time.time()
+    duration = t2 - t1
+    if verbose: print(f'QASM loading time: {duration}')
+    return circ
+
+
+def save_qasm(circuit, filename, verbose=True):
+    """
+    Save a circuit/qobj as a QASM file
+    :param circuit: Target circuit/qobj to save
+    :param filename: Path to the file
+    :param verbose: Prints out debug info
+    """
+    t1 = time.time()
+    circuit.qasm(filename=filename)
+    t2 = time.time()
+    duration = t2 - t1
+    if verbose: print(f'QASM saving time: {duration}')
+
+
+# PATCHER
+class ImagePatcher:
+    """
+    An utility class for image decomposition.
+    It generates 2x2 patches of the image, "wrapped" in a 4x4 image.
+    Border pixels are repeated to create a sort of frame
+    """
+    original_image = None
+    original_shape = None
+    image = None
+    max_patch = None
+    current_patch = None
+
+    def __preprocess(self):
+        """
+        An internal method for image padding
+        """
+        image = self.original_image.copy()
+        if self.original_shape[0] % 2 == 1:  # Bottom pad, if necessary
+            image = np.pad(image, ((0, 1), (0, 0)), mode="symmetric")
+        if self.original_shape[1] % 2 == 1:  # Right pad, if necessary
+            image = np.pad(image, ((0, 0), (0, 1)), mode="symmetric")
+        self.max_patch = (image.shape[0] // 2, image.shape[1] // 2)
+        self.current_patch = (0, 0)
+        image = np.pad(image, ((1, 1), (1, 1)), mode="symmetric") # Total padding
+        self.image = image
+
+    def load_image(self, image_array: np.ndarray = None):
+        """
+        Loads an image array into the patcher and pre-processes it
+        :param image_array: A NumPy array encoding the image
+        """
+        # TODO: Add image check - minimum (2,2)
+        self.original_image = image_array
+        image_shape = image_array.shape
+        self.original_shape = image_shape
+        self.__preprocess()
+
+    def get_image(self):
+        """
+        Returns the original image
+        :return: A NumPy array encoding the image
+        """
+        result = self.image[1:self.original_shape[0]+1, 1:self.original_shape[1]+1]
+        return result
+
+    def get_patches(self):
+        """
+        It generates a dictionary containing all possible patches
+        :return: A dictionary {pos : patch}
+        """
+        res = dict()
+        for y in range(0, self.max_patch[0]):
+            for x in range(0, self.max_patch[1]):
+                patch_pos = (y, x)
+                x_start = x*2
+                y_start = y*2
+                x_end = x_start + 4
+                y_end = y_start + 4
+                patch_image = self.image[y_start:y_end, x_start:x_end]
+                res[patch_pos] = patch_image
+        return res
+
+    def convert_patches(self, patches: dict):
+        """
+        Converts a patch dictionary into the resulting array, according to image original shape
+        :param patches: A dictionary {pos : patch}
+        :return: A NumPy array encoding the image
+        """
+        res = self.image.copy()
+        for pos, patch in patches.items():
+            y_start = pos[0] * 2 + 1
+            x_start = pos[1] * 2 + 1
+            y_end = y_start + 2
+            x_end = x_start + 2
+            to_replace = patch[1:3, 1:3]
+            res[y_start:y_end, x_start:x_end] = to_replace
+        res = res[1:self.original_shape[0]+1, 1:self.original_shape[1]+1]
+        return res
 
 # CONVERTER
 class Converter:
@@ -64,13 +202,18 @@ class Converter:
         return target_array
 
 
-
 # CIRCUITS
 class Circuit:
 
     # NEQR Module
     @staticmethod
     def __next_x(val: int, bit: int):
+        """
+        FOR INTERNAL USAGE: Find next pixel's coordinates to encode
+        :param val:
+        :param bit:
+        :return:
+        """
         if (val % (2 ** bit)) == 0:
             return bit
         else:
@@ -80,6 +223,7 @@ class Circuit:
     def neqr(imageArray, color_num=8, verbose=False):
         """
         Encodes the loaded array into a NEQR circuit
+        :param color_num: Size of color register
         :param imageArray: A NumPy Array encoding the input image. To create one, use Converter.to_array(...)
         :param verbose: Prints out encoding phase.
         :return: A QuantumCircuit class, encoding the NEQR image
@@ -92,15 +236,15 @@ class Circuit:
         c_qb = color_num  # Size of color register
         n_qb = int(math.ceil(math.log(size, 2)))  # Size of position registers
         # REGISTERS
-        c = QuantumRegister(c_qb, "c")
-        x_coor = QuantumRegister(n_qb, "x_coor_")
-        y_coor = QuantumRegister(n_qb, "y_coor_")
-        pos = QuantumRegister(bits=qunion(x_coor, y_coor))  # Useful for mcx
-        qc = QuantumCircuit(c, y_coor, x_coor, name="NEQR")
+        c = QuantumRegister(c_qb, "col")
+        x = QuantumRegister(n_qb, "x_coor")
+        y = QuantumRegister(n_qb, "y_coor")
+        pos = QuantumRegister(bits=qunion(x, y))  # Useful for mcx
+        qc = QuantumCircuit(c, y, x, name="NEQR")
         # ENCODING
         # Initialize position registers
-        qc.x(x_coor)
-        qc.x(y_coor)
+        qc.x(x)
+        qc.x(y)
         # First barrier
         qc.barrier()
         # Encoding colors
@@ -131,8 +275,8 @@ class Circuit:
         # Set last barrier
         qc.barrier()
         # Reset coordinates
-        qc.x(x_coor)
-        qc.x(y_coor)
+        qc.x(x)
+        qc.x(y)
         # RETURN
         return qc
 
@@ -158,7 +302,7 @@ class Circuit:
         :param size: Size of coordinate's register
         :return: A QuantumCircuit implementing the module
         """
-        return Circuit.__counter(size, 'y', add=False, module_name="CS-")
+        return Circuit.__counter(size, 'y_coor', add=False, module_name="CS-")
 
     @staticmethod
     def cycleshift_a(size):
@@ -167,7 +311,7 @@ class Circuit:
         :param size: Size of coordinate's register
         :return: A QuantumCircuit implementing the module
         """
-        return Circuit.__counter(size, 'x', add=False, module_name="CS-")
+        return Circuit.__counter(size, 'x_coor', add=False, module_name="CS-")
 
     @staticmethod
     def cycleshift_s(size):
@@ -176,7 +320,7 @@ class Circuit:
         :param size: Size of coordinate's register
         :return: A QuantumCircuit implementing the module
         """
-        return Circuit.__counter(size, 'y', module_name="CS+")
+        return Circuit.__counter(size, 'y_coor', module_name="CS+")
 
     @staticmethod
     def cycleshift_d(size):
@@ -185,7 +329,7 @@ class Circuit:
         :param size: Size of coordinate's register
         :return: A QuantumCircuit implementing the module
         """
-        return Circuit.__counter(size, 'x', module_name="CS+")
+        return Circuit.__counter(size, 'x_coor', module_name="CS+")
 
     # Swap Module
     @staticmethod
@@ -249,18 +393,18 @@ class Circuit:
         col_qb = color_num  # Size of color register
         pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
         # QUANTUM REGISTERS
-        c = QuantumRegister(col_qb, "c")  # Color
-        x = QuantumRegister(pos_qb, "x")  # X coordinates
-        y = QuantumRegister(pos_qb, "y")  # Y coordinates
-        a1 = QuantumRegister(col_qb, "a1_")  # Neighbor 1            |       |
-        a2 = QuantumRegister(col_qb, "a2_")  # Neighbor 2        1   |   2   |   3
-        a3 = QuantumRegister(col_qb, "a3_")  # Neighbor 3    _   _   |   _   |   _   _
-        a4 = QuantumRegister(col_qb, "a4_")  # Neighbor 4            |       |
-        a5 = QuantumRegister(col_qb, "a5_")  # Neighbor 5        4   |   5   |   6
-        a6 = QuantumRegister(col_qb, "a6_")  # Neighbor 6    _   _   |   _   |   _   _
-        a7 = QuantumRegister(col_qb, "a7_")  # Neighbor 7            |       |
-        a8 = QuantumRegister(col_qb, "a8_")  # Neighbor 8        7   |   8   |   9
-        a9 = QuantumRegister(col_qb, "a9_")  # Neighbor 9            |       |
+        c = QuantumRegister(col_qb, "col")  # Color
+        x = QuantumRegister(pos_qb, "x_coor")  # X coordinates
+        y = QuantumRegister(pos_qb, "y_coor")  # Y coordinates
+        a1 = QuantumRegister(col_qb, "a1")  # Neighbor 1            |       |
+        a2 = QuantumRegister(col_qb, "a2")  # Neighbor 2        1   |   2   |   3
+        a3 = QuantumRegister(col_qb, "a3")  # Neighbor 3    _   _   |   _   |   _   _
+        a4 = QuantumRegister(col_qb, "a4")  # Neighbor 4            |       |
+        a5 = QuantumRegister(col_qb, "a5")  # Neighbor 5        4   |   5   |   6
+        a6 = QuantumRegister(col_qb, "a6")  # Neighbor 6    _   _   |   _   |   _   _
+        a7 = QuantumRegister(col_qb, "a7")  # Neighbor 7            |       |
+        a8 = QuantumRegister(col_qb, "a8")  # Neighbor 8        7   |   8   |   9
+        a9 = QuantumRegister(col_qb, "a9")  # Neighbor 9            |       |
         # MAIN CIRCUIT
         circuit = QuantumCircuit(c, y, x, a1, a2, a3, a4, a5, a6, a7, a8, a9, name="NBRHD")
         # CIRCUITS
@@ -341,14 +485,14 @@ class Circuit:
         col_qb = color_num  # Size of color register
         pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
         # QUANTUM REGISTERS
-        c = QuantumRegister(col_qb, "c")  # Color
-        x = QuantumRegister(pos_qb, "x")  # X coordinates
-        y = QuantumRegister(pos_qb, "y")  # Y coordinates
-        a1 = QuantumRegister(col_qb, "a1_")  # Neighbor 1
-        a2 = QuantumRegister(col_qb, "a2_")  # Neighbor 2       |1|
-        a3 = QuantumRegister(col_qb, "a3_")  # Neighbor 3    |2||3||4|
-        a4 = QuantumRegister(col_qb, "a4_")  # Neighbor 4       |5|
-        a5 = QuantumRegister(col_qb, "a5_")  # Neighbor 5
+        c = QuantumRegister(col_qb, "col")  # Color
+        x = QuantumRegister(pos_qb, "x_coor")  # X coordinates
+        y = QuantumRegister(pos_qb, "y_coor")  # Y coordinates
+        a1 = QuantumRegister(col_qb, "a1")  # Neighbor 1
+        a2 = QuantumRegister(col_qb, "a2")  # Neighbor 2       |1|
+        a3 = QuantumRegister(col_qb, "a3")  # Neighbor 3    |2||3||4|
+        a4 = QuantumRegister(col_qb, "a4")  # Neighbor 4       |5|
+        a5 = QuantumRegister(col_qb, "a5")  # Neighbor 5
 
         # MAIN CIRCUIT
         circuit = QuantumCircuit(c, y, x, a1, a2, a3, a4, a5, name="NBRHD")
@@ -575,14 +719,14 @@ class QuantumMedianFilter:
         pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
         anc_qb = (col_qb - 1) * 2
         # QUANTUM REGISTERS
-        c = QuantumRegister(col_qb, "c")  # Color
-        x_coord = QuantumRegister(pos_qb, "x_coord_")  # X coordinates
-        y_coord = QuantumRegister(pos_qb, "y_coord_")  # Y coordinates
-        a1 = QuantumRegister(col_qb, "a1_")  # Neighbor 1 (up)
-        a2 = QuantumRegister(col_qb, "a2_")  # Neighbor 2 (left)
-        a3 = QuantumRegister(col_qb, "a3_")  # Neighbor 3 (center)
-        a4 = QuantumRegister(col_qb, "a4_")  # Neighbor 4 (right)
-        a5 = QuantumRegister(col_qb, "a5_")  # Neighbor 5 (down)
+        c = QuantumRegister(col_qb, "col")  # Color
+        x_coord = QuantumRegister(pos_qb, "x_coor")  # X coordinates
+        y_coord = QuantumRegister(pos_qb, "y_coor")  # Y coordinates
+        a1 = QuantumRegister(col_qb, "a1")  # Neighbor 1 (up)
+        a2 = QuantumRegister(col_qb, "a2")  # Neighbor 2 (left)
+        a3 = QuantumRegister(col_qb, "a3")  # Neighbor 3 (center)
+        a4 = QuantumRegister(col_qb, "a4")  # Neighbor 4 (right)
+        a5 = QuantumRegister(col_qb, "a5")  # Neighbor 5 (down)
         e = AncillaRegister(2, "e")
         anc = AncillaRegister(anc_qb, "anc")
         # CLASSICAL REGISTERS
@@ -633,19 +777,23 @@ class Simulator:
         else:
             self.simulator = AerSimulator(method="matrix_product_state")
 
-    def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None):
+    def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None, verbose=True):
         """
         Transpile circuit
-        :param circuit:
+        :param circuit: Target circuit to optimize
         :param optimization: Optimization level for transpiler (0 to 3)
         :param qasm_filename: If path is given, transpiled qobj will be saved as QASM string on file
         :return: Transpiled circuit
         """
         print(f'Transpiling {circuit.name}')
+        t1 = time.time()
         qobj = transpile(circuit, self.simulator, optimization_level=optimization)
+        t2 = time.time()
+        duration = t2 - t1
+        if verbose: print(f'Transpiling time: {duration}')
         if qasm_filename is not None:
-            print(f'Saving circuit as {qasm_filename}')
-            qobj.qasm(filename=qasm_filename)
+            if verbose: print(f'Saving circuit as {qasm_filename}')
+            save_qasm(qobj, filename=qasm_filename)
         return qobj
 
     def simulate(self, circuit: QuantumCircuit, shots=1024, verbose=False):
