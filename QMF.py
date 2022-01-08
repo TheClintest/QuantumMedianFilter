@@ -99,7 +99,7 @@ class ImagePatcher:
             image = np.pad(image, ((0, 0), (0, 1)), mode="symmetric")
         self.max_patch = (image.shape[0] // 2, image.shape[1] // 2)
         self.current_patch = (0, 0)
-        image = np.pad(image, ((1, 1), (1, 1)), mode="symmetric") # Total padding
+        image = np.pad(image, ((1, 1), (1, 1)), mode="symmetric")  # Total padding
         self.image = image
 
     def load_image(self, image_array: np.ndarray = None):
@@ -118,7 +118,7 @@ class ImagePatcher:
         Returns the original image
         :return: A NumPy array encoding the image
         """
-        result = self.image[1:self.original_shape[0]+1, 1:self.original_shape[1]+1]
+        result = self.image[1:self.original_shape[0] + 1, 1:self.original_shape[1] + 1]
         return result
 
     def get_patches(self):
@@ -130,8 +130,8 @@ class ImagePatcher:
         for y in range(0, self.max_patch[0]):
             for x in range(0, self.max_patch[1]):
                 patch_pos = (y, x)
-                x_start = x*2
-                y_start = y*2
+                x_start = x * 2
+                y_start = y * 2
                 x_end = x_start + 4
                 y_end = y_start + 4
                 patch_image = self.image[y_start:y_end, x_start:x_end]
@@ -152,8 +152,9 @@ class ImagePatcher:
             x_end = x_start + 2
             to_replace = patch[1:3, 1:3]
             res[y_start:y_end, x_start:x_end] = to_replace
-        res = res[1:self.original_shape[0]+1, 1:self.original_shape[1]+1]
+        res = res[1:self.original_shape[0] + 1, 1:self.original_shape[1] + 1]
         return res
+
 
 # CONVERTER
 class Converter:
@@ -330,6 +331,79 @@ class Circuit:
         :return: A QuantumCircuit implementing the module
         """
         return Circuit.__counter(size, 'x_coor', module_name="CS+")
+
+    @staticmethod
+    def adder_single():
+        """
+        A 5 qubit circuit with the following logic:
+        q0  =   q0  --  A
+        q1  =   q1 XOR (q2 XOR q0) -- B/Sum
+        q2  =   q2 XOR ((q2 XOR q0) AND (q2 XOR q1)) --Cin/Cout
+        q3  =   0   -- q2 XOR q0
+        q4  =   0   -- q2 XOR q1
+
+        It adds up the first two qubits (A and B) and the third (C), putting the SUM on q1 and the Cout on q2
+        :return: A QuantumCircuit implementing the module
+        """
+        circuit = QuantumCircuit(5, name="FA")
+        circuit.cx(2, 3)  # q3 = C
+        circuit.cx(2, 4)  # q4 = C
+        circuit.cx(0, 2)  # q2 = C XOR A
+        circuit.cx(1, 3)  # q3 = C XOR B
+        circuit.cx(2, 1)  # q1 = B XOR ( C XOR A )
+        circuit.ccx(2, 3, 4)  # q4 = C XOR ((C XOR A) AND (C XOR B))
+        circuit.reset(2)  # q2 = 0
+        circuit.reset(3)  # q3 = 0
+        circuit.cx(4, 2)  # q2 = C XOR ((C XOR A) AND (C XOR B))
+        circuit.reset(4)  # q4 = 0
+        return circuit
+
+    @staticmethod
+    def adder(size):
+        """
+        A full adder mod(2**size)
+        :param size: Size of addendum registers
+        :return: A QuantumCircuit implementing the module
+        """
+        a = QuantumRegister(size, name="a")
+        b = QuantumRegister(size, name="b")
+        c0 = AncillaRegister(1, name="c0")
+        c1 = AncillaRegister(1, name="c1")
+        c2 = AncillaRegister(1, name="c2")
+        circuit = QuantumCircuit(a, b, c0, c1, c2)
+        add = Circuit.adder_single()
+        for i in range(size):
+            circuit.compose(add.to_instruction(), qubits=[a[i], b[i], c0[0], c1[0], c2[0]], inplace=True)
+        # Cap value to 255 if c0 == 1
+        circuit.x(c0)
+        for i in range(size):
+            circuit.x(b[i])
+            circuit.ccx(c0[0], b[i], c1[0])
+            circuit.x(c1[0])
+            circuit.swap(b[i], c1[0])
+            circuit.reset(c1)
+        circuit.reset(c0)
+        return circuit
+
+    @staticmethod
+    def subtractor(size):
+        """
+        A full subtractor mod(2**size)
+        :param size: Size of addendum registers
+        :return: A QuantumCircuit implementing the module
+        """
+        a = QuantumRegister(size, name="a")
+        b = QuantumRegister(size, name="b")
+        c0 = AncillaRegister(1, name="c0")
+        c1 = AncillaRegister(1, name="c1")
+        c2 = AncillaRegister(1, name="c2")
+        circuit = QuantumCircuit(a, b, c0, c1, c2)
+        adder = Circuit.adder(size)
+        circuit.x(a)
+        circuit.compose(adder, qunion(a, b, c0, c1, c2), inplace=True)
+        circuit.x(a)
+        circuit.x(b)
+        return circuit
 
     # Swap Module
     @staticmethod
@@ -699,7 +773,6 @@ class Circuit:
         # RETURN
         return circuit
 
-
     @staticmethod
     def min_med_max_5(size):
         """
@@ -778,8 +851,9 @@ class QuantumMedianFilter:
         ym = ClassicalRegister(pos_qb, "ym")  # Y Measurement (0)
         # MAIN CIRCUIT
         circuit = QuantumCircuit(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2,
-                                 anc3, cm, ym, xm, name="QMF")
+                                 anc3, cm, ym, xm, name="MMM_TEST")
         # CIRCUITS
+        # prep = Circuit.neighborhood_prep(img, col_qb, verbose=False) # Ultimo tassello, vanno inseriti gli adder
         prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=False)
         mmm = Circuit.min_med_max(col_qb)
         swp = Circuit.swap(col_qb)
@@ -842,8 +916,6 @@ class QuantumMedianFilter:
         circuit.measure(x_coord, xm)
         #
         self.circuit = circuit
-
-
 
     def get(self):
         """
