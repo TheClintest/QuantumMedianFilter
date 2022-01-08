@@ -663,7 +663,42 @@ class Circuit:
     # Maximum-Median-Minimum Module
     @staticmethod
     def min_med_max(size):
-        pass
+        """
+        A module which sorts its input, which median is finally stored in the center register.
+        :param size: Size of the registers
+        :return: A QuantumCircuit implementing the module
+        """
+        # REGISTERS
+        anc_qb = (size - 1) * 2
+        a1 = QuantumRegister(size, "a1")
+        a2 = QuantumRegister(size, "a2")
+        a3 = QuantumRegister(size, "a3")
+        a4 = QuantumRegister(size, "a4")
+        a5 = QuantumRegister(size, "a5")
+        a6 = QuantumRegister(size, "a6")
+        a7 = QuantumRegister(size, "a7")
+        a8 = QuantumRegister(size, "a8")
+        a9 = QuantumRegister(size, "a9")
+        res1 = AncillaRegister(2, "e1")
+        res2 = AncillaRegister(2, "e2")
+        res3 = AncillaRegister(2, "e3")
+        anc1 = AncillaRegister(anc_qb, "anc1")
+        anc2 = AncillaRegister(anc_qb, "anc2")
+        anc3 = AncillaRegister(anc_qb, "anc3")
+        circuit = QuantumCircuit(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2, anc3, name="MMM")
+        # COMPOSING
+        sort = Circuit.sort(size).to_instruction()
+        # Row sort
+        circuit.append(sort, qunion(a1, a2, a3, res1, anc1))
+        circuit.append(sort, qunion(a4, a5, a6, res2, anc2))
+        circuit.append(sort, qunion(a7, a8, a9, res3, anc3))
+        # Column sort
+        circuit.append(sort, qunion(a1, a4, a7, res1, anc1))
+        circuit.append(sort, qunion(a2, a5, a8, res2, anc2))
+        circuit.append(sort, qunion(a3, a6, a9, res3, anc3))
+        # RETURN
+        return circuit
+
 
     @staticmethod
     def min_med_max_5(size):
@@ -705,6 +740,61 @@ class QuantumMedianFilter:
     """
 
     circuit = None
+
+    def prepare(self, img: np.array, color_size=8):
+        """
+        Prepare the circuit
+        :param img: A NumPy image representation
+        :param color_size: Size of the color registers (defult: 8)
+        """
+        # PARAMETERS
+        x_range = img.shape[1]  # X size
+        y_range = img.shape[0]  # Y size
+        col_qb = color_size  # Size of color register
+        pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
+        anc_qb = (col_qb - 1) * 2
+        # QUANTUM REGISTERS
+        c = QuantumRegister(col_qb, "col")  # Color
+        x_coord = QuantumRegister(pos_qb, "x_coor")  # X coordinates
+        y_coord = QuantumRegister(pos_qb, "y_coor")  # Y coordinates
+        a1 = QuantumRegister(col_qb, "a1")
+        a2 = QuantumRegister(col_qb, "a2")
+        a3 = QuantumRegister(col_qb, "a3")
+        a4 = QuantumRegister(col_qb, "a4")
+        a5 = QuantumRegister(col_qb, "a5")
+        a6 = QuantumRegister(col_qb, "a6")
+        a7 = QuantumRegister(col_qb, "a7")
+        a8 = QuantumRegister(col_qb, "a8")
+        a9 = QuantumRegister(col_qb, "a9")
+        res1 = AncillaRegister(2, "e1")
+        res2 = AncillaRegister(2, "e2")
+        res3 = AncillaRegister(2, "e3")
+        anc1 = AncillaRegister(anc_qb, "anc1")
+        anc2 = AncillaRegister(anc_qb, "anc2")
+        anc3 = AncillaRegister(anc_qb, "anc3")
+        # CLASSICAL REGISTERS
+        cm = ClassicalRegister(col_qb, "cm")  # Color Measurement (2)
+        xm = ClassicalRegister(pos_qb, "xm")  # X Measurement (1)
+        ym = ClassicalRegister(pos_qb, "ym")  # Y Measurement (0)
+        # MAIN CIRCUIT
+        circuit = QuantumCircuit(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2,
+                                 anc3, cm, ym, xm, name="QMF")
+        # CIRCUITS
+        prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=False)
+        mmm = Circuit.min_med_max(col_qb)
+        swp = Circuit.swap(col_qb)
+        # COMPOSITING
+        circuit.compose(prep, qunion(c, y_coord, x_coord, a1, a2, a3, a4, a5), inplace=True)
+        circuit.barrier()
+        circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2, anc3),
+                        inplace=True)
+        circuit.barrier()
+        circuit.compose(swp, qunion(c, a5), inplace=True)
+        circuit.barrier()
+        # MEASUREMENT
+        circuit.measure(c, cm)
+        circuit.measure(y_coord, ym)
+        circuit.measure(x_coord, xm)
 
     def prepare_5(self, img: np.array, color_size=8):
         """
@@ -753,11 +843,14 @@ class QuantumMedianFilter:
         #
         self.circuit = circuit
 
+
+
     def get(self):
         """
         If prepared, returns the Quantum Median Filter module
         :return: A QuantumCircuit implementing the module
         """
+
         return self.circuit
 
 
