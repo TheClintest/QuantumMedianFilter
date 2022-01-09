@@ -16,6 +16,7 @@ images["CHAPLIN"] = "chaplin_64.png"
 filename = images["TEST_8x8"]  # Change This One
 color_size = 4
 coor_size = 3
+lambda_par = 8
 # CONVERSION
 print("Converting image into array")
 img = Converter.to_array(f'{input_dir}{filename}')
@@ -30,7 +31,7 @@ for pos, patch in patches.items():
     # CIRCUIT
     print("Building the circuit")
     qmf = QuantumMedianFilter()
-    qmf.prepare_5(np.array(patch), color_size)
+    qmf.prepare(np.array(patch), lambda_par, color_size)
     circuit = qmf.get()
 
     # RUN

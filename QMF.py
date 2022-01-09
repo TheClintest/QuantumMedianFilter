@@ -206,6 +206,17 @@ class Converter:
 # CIRCUITS
 class Circuit:
 
+    # Setter
+    @staticmethod
+    def setter(number: int, size: int):
+        num = f'{number:08b}'[::-1]
+        n = QuantumRegister(size, "n")
+        circuit = QuantumCircuit(n, name=f'S{number}')
+        for ix in range(size):
+            if num[ix] == '1':
+                circuit.x(n[ix])
+        return circuit
+
     # NEQR Module
     @staticmethod
     def __next_x(val: int, bit: int):
@@ -370,7 +381,7 @@ class Circuit:
         c0 = AncillaRegister(1, name="c0")
         c1 = AncillaRegister(1, name="c1")
         c2 = AncillaRegister(1, name="c2")
-        circuit = QuantumCircuit(a, b, c0, c1, c2)
+        circuit = QuantumCircuit(a, b, c0, c1, c2, name="ADD")
         add = Circuit.adder_single()
         for i in range(size):
             circuit.compose(add.to_instruction(), qubits=[a[i], b[i], c0[0], c1[0], c2[0]], inplace=True)
@@ -397,7 +408,7 @@ class Circuit:
         c0 = AncillaRegister(1, name="c0")
         c1 = AncillaRegister(1, name="c1")
         c2 = AncillaRegister(1, name="c2")
-        circuit = QuantumCircuit(a, b, c0, c1, c2)
+        circuit = QuantumCircuit(a, b, c0, c1, c2, name="SUB")
         adder = Circuit.adder(size)
         circuit.x(a)
         circuit.compose(adder, qunion(a, b, c0, c1, c2), inplace=True)
@@ -452,7 +463,7 @@ class Circuit:
 
     # Neighborhood Preparation
     @staticmethod
-    def neighborhood_prep(img: np.array, color_num=8, verbose=False):
+    def neighborhood_prep(img: np.array, f1_val, f2_val, f3_val, f4_val, f5_val, color_num=8, verbose=False):
         """
         This module process a given image to be prepared for further processing.
         It actually stores a 3x3 mask of the given image on 9 ancillary registers.
@@ -479,8 +490,10 @@ class Circuit:
         a7 = QuantumRegister(col_qb, "a7")  # Neighbor 7            |       |
         a8 = QuantumRegister(col_qb, "a8")  # Neighbor 8        7   |   8   |   9
         a9 = QuantumRegister(col_qb, "a9")  # Neighbor 9            |       |
+        # ANCILLA REGISTERS
+        anc = AncillaRegister(3, "anc")
         # MAIN CIRCUIT
-        circuit = QuantumCircuit(c, y, x, a1, a2, a3, a4, a5, a6, a7, a8, a9, name="NBRHD")
+        circuit = QuantumCircuit(c, y, x, a1, a2, a3, a4, a5, a6, a7, a8, a9, anc, name="NBRHD")
         # CIRCUITS
         neqr = Circuit.neqr(img, color_num=col_qb, verbose=False).to_instruction()
         cs_w = Circuit.cycleshift_w(pos_qb).to_instruction()
@@ -488,9 +501,19 @@ class Circuit:
         cs_s = Circuit.cycleshift_s(pos_qb).to_instruction()
         cs_d = Circuit.cycleshift_d(pos_qb).to_instruction()
         swp = Circuit.swap(col_qb).to_instruction()
+        add = Circuit.adder(col_qb).to_instruction()
+        sub = Circuit.subtractor(col_qb).to_instruction()
+        q3 = Circuit.setter(f1_val, color_num).to_instruction()
+        q1 = Circuit.setter(f2_val, color_num).to_instruction()
+        q7 = Circuit.setter(f4_val * (-1), color_num).to_instruction()
+        q9 = Circuit.setter(f5_val * (-1), color_num).to_instruction()
         # COMPOSITING
         circuit.h(y)
         circuit.h(x)
+        circuit.append(q3, a3)
+        circuit.append(q1, a1)
+        circuit.append(q7, a7)
+        circuit.append(q9, a9)
         # 5
         if verbose: print("Preparing Pixel:5")
         circuit.append(neqr, qunion(c, y, x))
@@ -503,8 +526,7 @@ class Circuit:
         # 3
         if verbose: print("Preparing Pixel:3")
         circuit.append(cs_w, qunion(y))
-        circuit.append(neqr, qunion(c, y, x))
-        circuit.append(swp, qunion(c, a3))
+        circuit.append(add, qunion(c, a3, anc))
         # 2
         if verbose: print("Preparing Pixel:2")
         circuit.append(cs_a, qunion(x))
@@ -513,8 +535,7 @@ class Circuit:
         # 1
         if verbose: print("Preparing Pixel:1")
         circuit.append(cs_a, qunion(x))
-        circuit.append(neqr, qunion(c, y, x))
-        circuit.append(swp, qunion(c, a1))
+        circuit.append(add, qunion(c, a1, anc))
         # 4
         if verbose: print("Preparing Pixel:4")
         circuit.append(cs_s, qunion(y))
@@ -523,8 +544,7 @@ class Circuit:
         # 7
         if verbose: print("Preparing Pixel:7")
         circuit.append(cs_s, qunion(y))
-        circuit.append(neqr, qunion(c, y, x))
-        circuit.append(swp, qunion(c, a7))
+        circuit.append(sub, qunion(c, a7, anc))
         # 8
         if verbose: print("Preparing Pixel:8")
         circuit.append(cs_d, qunion(x))
@@ -533,8 +553,7 @@ class Circuit:
         # 9
         if verbose: print("Preparing Pixel:9")
         circuit.append(cs_d, qunion(x))
-        circuit.append(neqr, qunion(c, y, x))
-        circuit.append(swp, qunion(c, a9))
+        circuit.append(sub, qunion(c, a9, anc))
         # Reset
         if verbose: print("Restoring...")
         circuit.append(cs_w, qunion(y))
@@ -814,18 +833,39 @@ class QuantumMedianFilter:
 
     circuit = None
 
-    def prepare(self, img: np.array, color_size=8):
+    def prepare(self, img: np.array, lambda_par=1, color_size=8):
         """
         Prepare the circuit
+        :param lambda_par: Lambda parameter for filtering
         :param img: A NumPy image representation
         :param color_size: Size of the color registers (defult: 8)
         """
-        # PARAMETERS
+        # IMAGE PARAMETERS
         x_range = img.shape[1]  # X size
         y_range = img.shape[0]  # Y size
+        # QC PARAMETERS
         col_qb = color_size  # Size of color register
         pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
         anc_qb = (col_qb - 1) * 2
+        # FILTER PARAMETERS
+        w0_par = 1
+        u_par = 1 / lambda_par
+        const_par = (1 / (2 * u_par))
+        w1_par = 4 * w0_par - 0 * w0_par
+        w2_par = 3 * w0_par - 1 * w0_par
+        w3_par = 2 * w0_par - 2 * w0_par
+        w4_par = 1 * w0_par - 3 * w0_par
+        w5_par = 0 * w0_par - 4 * w0_par
+        f1_par = const_par * w1_par
+        f2_par = const_par * w2_par
+        f3_par = const_par * w3_par
+        f4_par = const_par * w4_par
+        f5_par = const_par * w5_par
+        f1 = round(f1_par * ((2 ** color_size) / 255))
+        f2 = round(f2_par * ((2 ** color_size) / 255))
+        f3 = round(f3_par * ((2 ** color_size) / 255))
+        f4 = round(f4_par * ((2 ** color_size) / 255))
+        f5 = round(f5_par * ((2 ** color_size) / 255))
         # QUANTUM REGISTERS
         c = QuantumRegister(col_qb, "col")  # Color
         x_coord = QuantumRegister(pos_qb, "x_coor")  # X coordinates
@@ -839,26 +879,30 @@ class QuantumMedianFilter:
         a7 = QuantumRegister(col_qb, "a7")
         a8 = QuantumRegister(col_qb, "a8")
         a9 = QuantumRegister(col_qb, "a9")
+        # ANCILLA REGISTERS
         res1 = AncillaRegister(2, "e1")
         res2 = AncillaRegister(2, "e2")
         res3 = AncillaRegister(2, "e3")
         anc1 = AncillaRegister(anc_qb, "anc1")
         anc2 = AncillaRegister(anc_qb, "anc2")
         anc3 = AncillaRegister(anc_qb, "anc3")
+        anc4 = AncillaRegister(3, "anc4")
         # CLASSICAL REGISTERS
         cm = ClassicalRegister(col_qb, "cm")  # Color Measurement (2)
         xm = ClassicalRegister(pos_qb, "xm")  # X Measurement (1)
         ym = ClassicalRegister(pos_qb, "ym")  # Y Measurement (0)
         # MAIN CIRCUIT
-        circuit = QuantumCircuit(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2,
-                                 anc3, cm, ym, xm, name="MMM_TEST")
+        circuit = QuantumCircuit(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9,  # QUANTUM REGISTERS
+                                 res1, res2, res3, anc1, anc2, anc3, anc4,  # ANCILLA REGISTERS
+                                 cm, ym, xm,  # CLASSICAL REGISTERS
+                                 name="QuantumMedianFilter"  # NAME
+                                 )
         # CIRCUITS
-        # prep = Circuit.neighborhood_prep(img, col_qb, verbose=False) # Ultimo tassello, vanno inseriti gli adder
-        prep = Circuit.neighborhood_prep_less(img, col_qb, verbose=False)
+        prep = Circuit.neighborhood_prep(img, f1, f2, f3, f4, f5, color_num = 4, verbose=False)
         mmm = Circuit.min_med_max(col_qb)
         swp = Circuit.swap(col_qb)
         # COMPOSITING
-        circuit.compose(prep, qunion(c, y_coord, x_coord, a1, a2, a3, a4, a5), inplace=True)
+        circuit.compose(prep, qunion(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9, anc4), inplace=True)
         circuit.barrier()
         circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2, anc3),
                         inplace=True)
@@ -869,6 +913,8 @@ class QuantumMedianFilter:
         circuit.measure(c, cm)
         circuit.measure(y_coord, ym)
         circuit.measure(x_coord, xm)
+        #
+        self.circuit = circuit
 
     def prepare_5(self, img: np.array, color_size=8):
         """
