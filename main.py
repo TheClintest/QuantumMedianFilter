@@ -13,7 +13,7 @@ images["TEST_2x2"] = "gray_2.png"
 images["TEST_4x4"] = "gray_4.png"
 images["TEST_8x8"] = "gray_8.png"
 images["CHAPLIN"] = "chaplin_64.png"
-filename = images["TEST_4x4"]  # Change This One
+filename = images["TEST_8x8"]  # Change This One
 # CONVERSION
 print("Converting image into array")
 img = Converter.to_array(f'{input_dir}{filename}')
@@ -26,12 +26,14 @@ for pos in patches.keys():
     converged_patches[pos] = False
 
 # PARAMETERS
-color_size = 3
+color_size = 4
 lambda_par = 8
 epsilon = 1
-
+iter = 0
 # EXECUTION
 while list(converged_patches.values()).count(False) != 0:
+
+    iter += 1
 
     for pos, patch in patches.items():
 
@@ -49,7 +51,7 @@ while list(converged_patches.values()).count(False) != 0:
             sim = Simulator(mps_max_bond_dimension=32)
             qobj = sim.transpile(circuit, optimization=0, qasm_filename=f'{qasm_dir}{circuit.name}')
             # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
-            answer = sim.simulate(qobj, shots=256, verbose=True)
+            answer = sim.simulate(qobj, shots=128, verbose=True)
 
             # OUTPUT
             out = patch.copy()
@@ -58,7 +60,12 @@ while list(converged_patches.values()).count(False) != 0:
             res[pos] = out
 
     converged_patches = patcher.converged_patches(patches, res, epsilon*(2**(8-color_size)))
-    patches = res.copy()
+    new = patcher.convert_patches(res)
+    output = f'{output_dir}output_{iter}.png'
+    Converter.to_image(new, filename=output)
+    patcher.load_image(new)
+    patches = patcher.get_patches()
+    res = patches.copy()
 
 
 output = f'{output_dir}output.png'

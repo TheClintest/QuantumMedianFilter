@@ -545,7 +545,7 @@ class Circuit:
         # 3
         if verbose: print("Preparing Pixel:3")
         circuit.append(cs_w, qunion(y))
-        circuit.append(add, qunion(c, a3, anc))
+        circuit.append(add, qunion(a5, a3, anc))
         # 2
         if verbose: print("Preparing Pixel:2")
         circuit.append(cs_a, qunion(x))
@@ -554,7 +554,7 @@ class Circuit:
         # 1
         if verbose: print("Preparing Pixel:1")
         circuit.append(cs_a, qunion(x))
-        circuit.append(add, qunion(c, a1, anc))
+        circuit.append(add, qunion(a5, a1, anc))
         # 4
         if verbose: print("Preparing Pixel:4")
         circuit.append(cs_s, qunion(y))
@@ -563,7 +563,7 @@ class Circuit:
         # 7
         if verbose: print("Preparing Pixel:7")
         circuit.append(cs_s, qunion(y))
-        circuit.append(sub, qunion(c, a7, anc))
+        circuit.append(sub, qunion(a5, a7, anc))
         # 8
         if verbose: print("Preparing Pixel:8")
         circuit.append(cs_d, qunion(x))
@@ -572,7 +572,7 @@ class Circuit:
         # 9
         if verbose: print("Preparing Pixel:9")
         circuit.append(cs_d, qunion(x))
-        circuit.append(sub, qunion(c, a9, anc))
+        circuit.append(sub, qunion(a5, a9, anc))
         # Reset
         if verbose: print("Restoring...")
         circuit.append(cs_w, qunion(y))
