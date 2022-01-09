@@ -155,6 +155,25 @@ class ImagePatcher:
         res = res[1:self.original_shape[0] + 1, 1:self.original_shape[1] + 1]
         return res
 
+    def check_patch(self, a, b, tolerance):
+        for x in range(1, 3):
+            for y in range(1, 3):
+                val1 = int(a[y][x])
+                val2 = int(b[y][x])
+                res = abs(val2 - val1)
+                if (res > tolerance):
+                    # print("CONVERGENCE %d/%d"%(res,tolerance))
+                    return False
+        return True
+
+    def converged_patches(self, old:dict, new:dict, epsilon):
+        res = dict()
+        positions = old.keys()
+        for pos in positions:
+            res[pos] = self.check_patch(old[pos], new[pos], epsilon)
+        return res
+
+
 
 # CONVERTER
 class Converter:
@@ -278,7 +297,7 @@ class Circuit:
             qc.x(pos[to_change])
             # Set CX-Gate
             for n in range(c_qb):
-                new_pixel = pixel >> (8 - color_num)
+                new_pixel = pixel >> (8 - color_num)  # THIS IS WHERE COLOR ENCODING CHANGES!
                 bit = (new_pixel >> n) & 1
                 if bit == 1:
                     qc.mcx(pos, c[n])
@@ -898,7 +917,7 @@ class QuantumMedianFilter:
                                  name="QuantumMedianFilter"  # NAME
                                  )
         # CIRCUITS
-        prep = Circuit.neighborhood_prep(img, f1, f2, f3, f4, f5, color_num = 4, verbose=False)
+        prep = Circuit.neighborhood_prep(img, f1, f2, f3, f4, f5, color_num = color_size, verbose=False)
         mmm = Circuit.min_med_max(col_qb)
         swp = Circuit.swap(col_qb)
         # COMPOSITING
@@ -1023,10 +1042,10 @@ class Simulator:
         total = t2 - t1
         if verbose:
             print("---RESULTS---")
-            print("")
             print(f"Time:{total}")
             print(f"Integrity:{len(answer)}")
             print(answer)
+            print("-------------")
         return answer
 
 
