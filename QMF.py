@@ -161,18 +161,17 @@ class ImagePatcher:
                 val1 = int(a[y][x])
                 val2 = int(b[y][x])
                 res = abs(val2 - val1)
-                if (res > tolerance):
+                if res > tolerance:
                     # print("CONVERGENCE %d/%d"%(res,tolerance))
                     return False
         return True
 
-    def converged_patches(self, old:dict, new:dict, epsilon):
+    def converged_patches(self, old: dict, new: dict, epsilon):
         res = dict()
         positions = old.keys()
         for pos in positions:
             res[pos] = self.check_patch(old[pos], new[pos], epsilon)
         return res
-
 
 
 # CONVERTER
@@ -482,7 +481,7 @@ class Circuit:
 
     # Neighborhood Preparation
     @staticmethod
-    def neighborhood_prep(img: np.array, f1_val, f2_val, f3_val, f4_val, f5_val, color_num=8, verbose=False):
+    def neighborhood_prep(img: np.array, f1_val, f2_val, f3_val, f4_val, f5_val, color_size=8, verbose=False):
         """
         This module process a given image to be prepared for further processing.
         It actually stores a 3x3 mask of the given image on 9 ancillary registers.
@@ -494,8 +493,13 @@ class Circuit:
         # PARAMETERS
         x_range = img.shape[1]  # X size
         y_range = img.shape[0]  # Y size
-        col_qb = color_num  # Size of color register
+        col_qb = color_size  # Size of color register
         pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
+        f1 = int(abs(f1_val)) >> color_size
+        f2 = int(abs(f2_val)) >> color_size
+        f3 = int(abs(f3_val)) >> color_size
+        f4 = int(abs(f4_val)) >> color_size
+        f5 = int(abs(f5_val)) >> color_size
         # QUANTUM REGISTERS
         c = QuantumRegister(col_qb, "col")  # Color
         x = QuantumRegister(pos_qb, "x_coor")  # X coordinates
@@ -522,10 +526,10 @@ class Circuit:
         swp = Circuit.swap(col_qb).to_instruction()
         add = Circuit.adder(col_qb).to_instruction()
         sub = Circuit.subtractor(col_qb).to_instruction()
-        q3 = Circuit.setter(f1_val, color_num).to_instruction()
-        q1 = Circuit.setter(f2_val, color_num).to_instruction()
-        q7 = Circuit.setter(f4_val * (-1), color_num).to_instruction()
-        q9 = Circuit.setter(f5_val * (-1), color_num).to_instruction()
+        q3 = Circuit.setter(f1, color_size).to_instruction()
+        q1 = Circuit.setter(f2, color_size).to_instruction()
+        q7 = Circuit.setter(f4, color_size).to_instruction()
+        q9 = Circuit.setter(f5, color_size).to_instruction()
         # COMPOSITING
         circuit.h(y)
         circuit.h(x)
@@ -808,6 +812,8 @@ class Circuit:
         circuit.append(sort, qunion(a1, a4, a7, res1, anc1))
         circuit.append(sort, qunion(a2, a5, a8, res2, anc2))
         circuit.append(sort, qunion(a3, a6, a9, res3, anc3))
+        # Right diagonal sort
+        circuit.append(sort, qunion(a3, a5, a7, res1, anc1))
         # RETURN
         return circuit
 
@@ -875,16 +881,11 @@ class QuantumMedianFilter:
         w3_par = 2 * w0_par - 2 * w0_par
         w4_par = 1 * w0_par - 3 * w0_par
         w5_par = 0 * w0_par - 4 * w0_par
-        f1_par = const_par * w1_par
-        f2_par = const_par * w2_par
-        f3_par = const_par * w3_par
-        f4_par = const_par * w4_par
-        f5_par = const_par * w5_par
-        f1 = round(f1_par * ((2 ** color_size) / 255))
-        f2 = round(f2_par * ((2 ** color_size) / 255))
-        f3 = round(f3_par * ((2 ** color_size) / 255))
-        f4 = round(f4_par * ((2 ** color_size) / 255))
-        f5 = round(f5_par * ((2 ** color_size) / 255))
+        f1 = const_par * w1_par
+        f2 = const_par * w2_par
+        f3 = const_par * w3_par
+        f4 = const_par * w4_par
+        f5 = const_par * w5_par
         # QUANTUM REGISTERS
         c = QuantumRegister(col_qb, "col")  # Color
         x_coord = QuantumRegister(pos_qb, "x_coor")  # X coordinates
@@ -917,7 +918,7 @@ class QuantumMedianFilter:
                                  name="QuantumMedianFilter"  # NAME
                                  )
         # CIRCUITS
-        prep = Circuit.neighborhood_prep(img, f1, f2, f3, f4, f5, color_num = color_size, verbose=False)
+        prep = Circuit.neighborhood_prep(img, f1, f2, f3, f4, f5, color_size=color_size, verbose=False)
         mmm = Circuit.min_med_max(col_qb)
         swp = Circuit.swap(col_qb)
         # COMPOSITING

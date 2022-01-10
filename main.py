@@ -27,8 +27,8 @@ for pos in patches.keys():
 
 # PARAMETERS
 color_size = 4
-lambda_par = 8
-epsilon = 1
+lambda_par = 16
+epsilon = 16
 iter = 0
 # EXECUTION
 while list(converged_patches.values()).count(False) != 0:
@@ -38,6 +38,7 @@ while list(converged_patches.values()).count(False) != 0:
     for pos, patch in patches.items():
 
         if converged_patches[pos] is False:
+            print(f'ITER: {iter}')
             print(f'PATCH: {pos}')
 
             # CIRCUIT
@@ -56,10 +57,10 @@ while list(converged_patches.values()).count(False) != 0:
             # OUTPUT
             out = patch.copy()
             out = Converter.decode_image(answer, out, color_size=color_size)
-            # Converter.to_image(out, filename=output)
+            # Converter.to_image(out, filename=f'{output_dir}patch_{pos[0]}{pos[1]}_{iter}.png')
             res[pos] = out
 
-    converged_patches = patcher.converged_patches(patches, res, epsilon*(2**(8-color_size)))
+    converged_patches = patcher.converged_patches(patches, res, epsilon)
     new = patcher.convert_patches(res)
     output = f'{output_dir}output_{iter}.png'
     Converter.to_image(new, filename=output)
