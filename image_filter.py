@@ -23,14 +23,14 @@ new_file = "gray_8_filtered"
 image = Image.open(dir + file)
 
 lambda_par = 1
-while lambda_par <= 64:
+while lambda_par <= 256:
 
     # Parameters
     im = np.array(image.convert("L"))
     new_im = im.copy()
     x_range = im.shape[0]
     y_range = im.shape[1]
-    eps = 17
+    eps = 16
     w0_par = 1
     u_par = 1 / lambda_par
     const_par = (1 / (2 * u_par))

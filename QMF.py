@@ -1,4 +1,6 @@
 # IMPORTS
+import os
+
 from PIL import Image
 import math
 import time
@@ -46,7 +48,9 @@ def print_circuit(circuit, filename: str = None):
 
 
 # QASM
-def load_qasm(filename, verbose=True):
+qasm_dir = "./qasm/"
+
+def load_qasm(filename, verbose=False):
     """
     Load a QASM string from a path, returning the corresponding circuit
     :param filename: Path to QASM file
@@ -54,14 +58,14 @@ def load_qasm(filename, verbose=True):
     :return: A QuantumCircuit described in the file
     """
     t1 = time.time()
-    circ = QuantumCircuit.from_qasm_file(filename)
+    circ = QuantumCircuit.from_qasm_file(f'{filename}')
     t2 = time.time()
     duration = t2 - t1
-    if verbose: print(f'QASM loading time: {duration}')
+    if verbose: print(f'QASM loading time for {filename}: {duration}')
     return circ
 
 
-def save_qasm(circuit, filename, verbose=True):
+def save_qasm(circuit, filename, verbose=False):
     """
     Save a circuit/qobj as a QASM file
     :param circuit: Target circuit/qobj to save
@@ -69,7 +73,7 @@ def save_qasm(circuit, filename, verbose=True):
     :param verbose: Prints out debug info
     """
     t1 = time.time()
-    circuit.qasm(filename=filename)
+    circuit.qasm(filename=f'{filename}')
     t2 = time.time()
     duration = t2 - t1
     if verbose: print(f'QASM saving time: {duration}')
@@ -221,6 +225,168 @@ class Converter:
         return target_array
 
 
+# SIMULATOR
+class Simulator:
+    """
+    An Aer Simulator for experimentation.
+    Default setting is "matrix_product_state"
+    """
+
+    simulator = None
+
+    def __init__(self, mps_max_bond_dimension: int = None):
+        if mps_max_bond_dimension is not None:
+            self.simulator = AerSimulator(method="matrix_product_state",
+                                          matrix_product_state_max_bond_dimension=mps_max_bond_dimension)
+        else:
+            self.simulator = AerSimulator(method="matrix_product_state")
+
+    def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None, verbose=False):
+        """
+        Transpile circuit
+        :param circuit: Target circuit to optimize
+        :param optimization: Optimization level for transpiler (0 to 3)
+        :param qasm_filename: If path is given, transpiled qobj will be saved as QASM string on file
+        :return: Transpiled circuit
+        """
+        print(f'Transpiling {circuit.name}')
+        t1 = time.time()
+        qobj = transpile(circuit, self.simulator, optimization_level=optimization)
+        t2 = time.time()
+        duration = t2 - t1
+        if verbose: print(f'Transpiling time: {duration}')
+        if qasm_filename is not None:
+            if verbose: print(f'Saving circuit as {qasm_filename}')
+            save_qasm(qobj, filename=qasm_filename)
+        return qobj
+
+    def simulate(self, circuit: QuantumCircuit, shots=1024, verbose=False):
+        """
+        Simulate experiment
+        :param circuit: A quantum circuit to execute
+        :param shots: Number of experiments
+        :param verbose: Debug printing
+        :return: A dictionary with all results.
+        """
+        print(f'Simulating qobj {circuit.name}')
+        t1 = time.time()
+        results = self.simulator.run(circuit, shots=shots).result()
+        answer = results.get_counts()
+        t2 = time.time()
+        total = t2 - t1
+        if verbose:
+            print("---RESULTS---")
+            print(f"Time:{total}")
+            print(f"Integrity:{len(answer)}")
+            print(answer)
+            print("-------------")
+        return answer
+
+
+# PRINTING
+def print_circuit(circuit, filename: str = None):
+    """
+    Prints out a representation of a given circuit.
+    If "filename" is provided, it saves the visualization in the file system.
+    :param circuit: Input circuit to visualize
+    :param filename: Path for the output
+    """
+    style = {
+        'displaycolor': {
+            "NEQR": "#FF33FF",
+            "CS+": "#FF0000",
+            "CS-": "#FF8888",
+            "SWAP": "#AAAAFF"
+        },
+        'fontsize': 8
+    }
+    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
+    if filename is not None:
+        plt.savefig(filename)
+    plt.show()
+
+
+# SIMULATOR
+class Simulator:
+    """
+    An Aer Simulator for experimentation.
+    Default setting is "matrix_product_state"
+    """
+
+    simulator = None
+
+    def __init__(self, mps_max_bond_dimension: int = None):
+        if mps_max_bond_dimension is not None:
+            self.simulator = AerSimulator(method="matrix_product_state",
+                                          matrix_product_state_max_bond_dimension=mps_max_bond_dimension)
+        else:
+            self.simulator = AerSimulator(method="matrix_product_state")
+
+    def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None, verbose=False):
+        """
+        Transpile circuit
+        :param circuit: Target circuit to optimize
+        :param optimization: Optimization level for transpiler (0 to 3)
+        :param qasm_filename: If path is given, transpiled qobj will be saved as QASM string on file
+        :return: Transpiled circuit
+        """
+        print(f'Transpiling {circuit.name}')
+        t1 = time.time()
+        qobj = transpile(circuit, self.simulator, optimization_level=optimization)
+        t2 = time.time()
+        duration = t2 - t1
+        if verbose: print(f'Transpiling time: {duration}')
+        if qasm_filename is not None:
+            if verbose: print(f'Saving circuit as {qasm_filename}')
+            save_qasm(qobj, filename=qasm_filename)
+        return qobj
+
+    def simulate(self, circuit: QuantumCircuit, shots=1024, verbose=False):
+        """
+        Simulate experiment
+        :param circuit: A quantum circuit to execute
+        :param shots: Number of experiments
+        :param verbose: Debug printing
+        :return: A dictionary with all results.
+        """
+        print(f'Simulating qobj {circuit.name}')
+        t1 = time.time()
+        results = self.simulator.run(circuit, shots=shots).result()
+        answer = results.get_counts()
+        t2 = time.time()
+        total = t2 - t1
+        if verbose:
+            print("---RESULTS---")
+            print(f"Time:{total}")
+            print(f"Integrity:{len(answer)}")
+            print(answer)
+            print("-------------")
+        return answer
+
+
+# PRINTING
+def print_circuit(circuit, filename: str = None):
+    """
+    Prints out a representation of a given circuit.
+    If "filename" is provided, it saves the visualization in the file system.
+    :param circuit: Input circuit to visualize
+    :param filename: Path for the output
+    """
+    style = {
+        'displaycolor': {
+            "NEQR": "#FF33FF",
+            "CS+": "#FF0000",
+            "CS-": "#FF8888",
+            "SWAP": "#AAAAFF"
+        },
+        'fontsize': 8
+    }
+    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
+    if filename is not None:
+        plt.savefig(filename)
+    plt.show()
+
+
 # CIRCUITS
 class Circuit:
 
@@ -314,7 +480,7 @@ class Circuit:
     @staticmethod
     def __counter(size, reg_name='q', add=True, module_name="CNTR"):
         q = QuantumRegister(size, reg_name)
-        circuit = QuantumCircuit(q, name=module_name)
+        circuit = QuantumCircuit(q, name=f'{module_name}{size}')
         order = range(size)
         if add:
             order = order.__reversed__()
@@ -399,7 +565,7 @@ class Circuit:
         c0 = AncillaRegister(1, name="c0")
         c1 = AncillaRegister(1, name="c1")
         c2 = AncillaRegister(1, name="c2")
-        circuit = QuantumCircuit(a, b, c0, c1, c2, name="ADD")
+        circuit = QuantumCircuit(a, b, c0, c1, c2, name=f'ADD{size}')
         add = Circuit.adder_single()
         for i in range(size):
             circuit.compose(add.to_instruction(), qubits=[a[i], b[i], c0[0], c1[0], c2[0]], inplace=True)
@@ -426,7 +592,7 @@ class Circuit:
         c0 = AncillaRegister(1, name="c0")
         c1 = AncillaRegister(1, name="c1")
         c2 = AncillaRegister(1, name="c2")
-        circuit = QuantumCircuit(a, b, c0, c1, c2, name="SUB")
+        circuit = QuantumCircuit(a, b, c0, c1, c2, name=f'SUB{size}')
         adder = Circuit.adder(size)
         circuit.x(a)
         circuit.compose(adder, qunion(a, b, c0, c1, c2), inplace=True)
@@ -446,7 +612,7 @@ class Circuit:
         """
         a = QuantumRegister(size, a_name)
         b = QuantumRegister(size, b_name)
-        circuit = QuantumCircuit(a, b, name="SWAP")
+        circuit = QuantumCircuit(a, b, name=f'SWAP{size}')
         for i in range(size):
             circuit.swap(i, i + size)
         return circuit
@@ -486,7 +652,7 @@ class Circuit:
         This module process a given image to be prepared for further processing.
         It actually stores a 3x3 mask of the given image on 9 ancillary registers.
         :param img: A NumPy array representing the image
-        :param color_num: Size of the color registers
+        :param color_size: Size of the color registers
         :param verbose: For debug usage
         :return: A QuantumCircuit implementing the module
         """
@@ -526,10 +692,10 @@ class Circuit:
         swp = Circuit.swap(col_qb).to_instruction()
         add = Circuit.adder(col_qb).to_instruction()
         sub = Circuit.subtractor(col_qb).to_instruction()
-        q3 = Circuit.setter(f1, color_size).to_instruction()
-        q1 = Circuit.setter(f2, color_size).to_instruction()
-        q7 = Circuit.setter(f4, color_size).to_instruction()
-        q9 = Circuit.setter(f5, color_size).to_instruction()
+        q3 = Circuit.setter(f1, col_qb).to_instruction()
+        q1 = Circuit.setter(f2, col_qb).to_instruction()
+        q7 = Circuit.setter(f4, col_qb).to_instruction()
+        q9 = Circuit.setter(f5, col_qb).to_instruction()
         # COMPOSITING
         circuit.h(y)
         circuit.h(x)
@@ -801,7 +967,8 @@ class Circuit:
         anc1 = AncillaRegister(anc_qb, "anc1")
         anc2 = AncillaRegister(anc_qb, "anc2")
         anc3 = AncillaRegister(anc_qb, "anc3")
-        circuit = QuantumCircuit(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2, anc3, name="MMM")
+        circuit = QuantumCircuit(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2, anc3,
+                                 name=f'MMM{size}')
         # COMPOSING
         sort = Circuit.sort(size).to_instruction()
         # Row sort
@@ -857,6 +1024,35 @@ class QuantumMedianFilter:
     """
 
     circuit = None
+
+    def generate(self, simulator: Simulator, color_size: int, coordinate_size: int, optimization_level=3):
+        # CIRCUITS
+        mmm = Circuit.min_med_max(color_size)
+        swp = Circuit.swap(color_size)
+        cs_w = Circuit.cycleshift_w(coordinate_size)
+        cs_a = Circuit.cycleshift_a(coordinate_size)
+        cs_s = Circuit.cycleshift_s(coordinate_size)
+        cs_d = Circuit.cycleshift_d(coordinate_size)
+        add = Circuit.adder(color_size)
+        sub = Circuit.subtractor(color_size)
+        # TRANSPILE
+        # mmm_q = simulator.transpile(mmm, optimization=optimization_level)
+        swp_q = simulator.transpile(swp, optimization=optimization_level)
+        cs_w_q = simulator.transpile(cs_w, optimization=optimization_level)
+        cs_a_q = simulator.transpile(cs_a, optimization=optimization_level)
+        cs_s_q = simulator.transpile(cs_s, optimization=optimization_level)
+        cs_d_q = simulator.transpile(cs_d, optimization=optimization_level)
+        add_q = simulator.transpile(add, optimization=optimization_level)
+        sub_q = simulator.transpile(sub, optimization=optimization_level)
+        # SAVE
+        # save_qasm(mmm_q, f'{mmm.name}', True)
+        save_qasm(swp_q, f'{swp.name}', True)
+        save_qasm(cs_w_q, f'{cs_w.name}', True)
+        save_qasm(cs_a_q, f'{cs_a.name}', True)
+        save_qasm(cs_s_q, f'{cs_s.name}', True)
+        save_qasm(cs_d_q, f'{cs_d.name}', True)
+        save_qasm(add_q, f'{add.name}', True)
+        save_qasm(sub_q, f'{sub.name}', True)
 
     def prepare(self, img: np.array, lambda_par=1, color_size=8):
         """
@@ -918,7 +1114,7 @@ class QuantumMedianFilter:
                                  name="QuantumMedianFilter"  # NAME
                                  )
         # CIRCUITS
-        prep = Circuit.neighborhood_prep(img, f1, f2, f3, f4, f5, color_size=color_size, verbose=False)
+        prep = Circuit.neighborhood_prep(img, f1, f2, f3, f4, f5, color_size=color_size)
         mmm = Circuit.min_med_max(col_qb)
         swp = Circuit.swap(col_qb)
         # COMPOSITING
@@ -990,64 +1186,6 @@ class QuantumMedianFilter:
         """
 
         return self.circuit
-
-
-# SIMULATOR
-class Simulator:
-    """
-    An Aer Simulator for experimentation.
-    Default setting is "matrix_product_state"
-    """
-
-    simulator = None
-
-    def __init__(self, mps_max_bond_dimension: int = None):
-        if mps_max_bond_dimension is not None:
-            self.simulator = AerSimulator(method="matrix_product_state",
-                                          matrix_product_state_max_bond_dimension=mps_max_bond_dimension)
-        else:
-            self.simulator = AerSimulator(method="matrix_product_state")
-
-    def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None, verbose=True):
-        """
-        Transpile circuit
-        :param circuit: Target circuit to optimize
-        :param optimization: Optimization level for transpiler (0 to 3)
-        :param qasm_filename: If path is given, transpiled qobj will be saved as QASM string on file
-        :return: Transpiled circuit
-        """
-        print(f'Transpiling {circuit.name}')
-        t1 = time.time()
-        qobj = transpile(circuit, self.simulator, optimization_level=optimization)
-        t2 = time.time()
-        duration = t2 - t1
-        if verbose: print(f'Transpiling time: {duration}')
-        if qasm_filename is not None:
-            if verbose: print(f'Saving circuit as {qasm_filename}')
-            save_qasm(qobj, filename=qasm_filename)
-        return qobj
-
-    def simulate(self, circuit: QuantumCircuit, shots=1024, verbose=False):
-        """
-        Simulate experiment
-        :param circuit: A quantum circuit to execute
-        :param shots: Number of experiments
-        :param verbose: Debug printing
-        :return: A dictionary with all results.
-        """
-        print(f'Simulating qobj {circuit.name}')
-        t1 = time.time()
-        results = self.simulator.run(circuit, shots=shots).result()
-        answer = results.get_counts()
-        t2 = time.time()
-        total = t2 - t1
-        if verbose:
-            print("---RESULTS---")
-            print(f"Time:{total}")
-            print(f"Integrity:{len(answer)}")
-            print(answer)
-            print("-------------")
-        return answer
 
 
 # PRINTING
