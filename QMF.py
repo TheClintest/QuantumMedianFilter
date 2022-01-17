@@ -242,7 +242,10 @@ class Simulator:
                                           max_parallel_threads=48
                                           )
         else:
-            self.simulator = AerSimulator(method="matrix_product_state")
+            self.simulator = AerSimulator(method="statevector",
+                                          max_parallel_experiments=0,
+                                          max_parallel_threads=48
+                                          )
 
     def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None, verbose=False):
         """
