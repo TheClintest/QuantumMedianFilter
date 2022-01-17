@@ -52,7 +52,7 @@ while list(converged_patches.values()).count(False) != 0:
         # RUN
         print("Setting simulator up")
         sim = Simulator(mps_max_bond_dimension=32)
-        qobj = sim.transpile(circuit, optimization=0, qasm_filename=f'{qasm_dir}{circuit.name}')
+        qobj = sim.transpile(circuit, optimization=0, verbose=True)
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
         answer = sim.simulate(qobj, shots=128, verbose=True)
 

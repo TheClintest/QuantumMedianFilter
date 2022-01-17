@@ -237,7 +237,10 @@ class Simulator:
     def __init__(self, mps_max_bond_dimension: int = None):
         if mps_max_bond_dimension is not None:
             self.simulator = AerSimulator(method="matrix_product_state",
-                                          matrix_product_state_max_bond_dimension=mps_max_bond_dimension)
+                                          matrix_product_state_max_bond_dimension=mps_max_bond_dimension,
+                                          max_parallel_experiments=0,
+                                          max_parallel_threads=48
+                                          )
         else:
             self.simulator = AerSimulator(method="matrix_product_state")
 
