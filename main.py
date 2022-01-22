@@ -21,6 +21,10 @@ lambda_par = int(args[1])
 epsilon = int(args[2])
 optimization = 0
 
+print(f"COLORSIZE: {color_size}")
+print(f"LAMBDA: {lambda_par}")
+print(f"EPSILON: {epsilon}")
+
 # INPUT DIRECTORY
 input_dir = "./images/"
 # OUTPUT DIRECTORY
