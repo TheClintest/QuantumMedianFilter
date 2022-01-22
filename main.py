@@ -15,10 +15,10 @@ else:
 
 
 # PARAMETERS
-color_size = args[0]
+color_size = int(args[0])
 coordinate_size = 2
-lambda_par = args[1]
-epsilon = args[2]
+lambda_par = int(args[1])
+epsilon = int(args[2])
 optimization = 0
 
 # INPUT DIRECTORY
