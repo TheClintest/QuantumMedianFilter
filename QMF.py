@@ -874,14 +874,14 @@ class QuantumMedianFilter:
         add = Circuit.adder(color_size)
         sub = Circuit.subtractor(color_size)
         # Transpile and save
-        simulator.transpile(mmm, optimization=optimization_level, qasm_filename=mmm.name)
-        simulator.transpile(swp, optimization=optimization_level, qasm_filename=swp.name)
-        simulator.transpile(cs_w, optimization=optimization_level, qasm_filename=cs_w.name)
-        simulator.transpile(cs_a, optimization=optimization_level, qasm_filename=cs_a.name)
-        simulator.transpile(cs_s, optimization=optimization_level, qasm_filename=cs_s.name)
-        simulator.transpile(cs_d, optimization=optimization_level, qasm_filename=cs_d.name)
-        simulator.transpile(add, optimization=optimization_level, qasm_filename=add.name)
-        simulator.transpile(sub, optimization=optimization_level, qasm_filename=sub.name)
+        self.loaded_circuits["MMM"] = simulator.transpile(mmm, optimization=optimization_level, qasm_filename=mmm.name)
+        self.loaded_circuits["SWAP"] = simulator.transpile(swp, optimization=optimization_level, qasm_filename=swp.name)
+        self.loaded_circuits["CSW"] = simulator.transpile(cs_w, optimization=optimization_level, qasm_filename=cs_w.name)
+        self.loaded_circuits["CSA"] = simulator.transpile(cs_a, optimization=optimization_level, qasm_filename=cs_a.name)
+        self.loaded_circuits["CSS"] = simulator.transpile(cs_s, optimization=optimization_level, qasm_filename=cs_s.name)
+        self.loaded_circuits["CSD"] = simulator.transpile(cs_d, optimization=optimization_level, qasm_filename=cs_d.name)
+        self.loaded_circuits["ADD"] = simulator.transpile(add, optimization=optimization_level, qasm_filename=add.name)
+        self.loaded_circuits["SUB"] = simulator.transpile(sub, optimization=optimization_level, qasm_filename=sub.name)
 
     def load_precompiled_circuits(self):
         to_load = ["MMM", "SWAP", "CSW", "CSA", "CSS", "CSD", "ADD", "SUB"]

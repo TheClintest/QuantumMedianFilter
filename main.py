@@ -8,9 +8,9 @@ if len(args) != 3:
     raise SystemExit(f'Usage: {sys.argv[0]} [-g] COLORSIZE LAMBDA EPSILON')
 
 if "-g" in opts:
-    generate = True
+    generate_flag = True
 else:
-    generate = False
+    generate_flag = False
 
 
 
@@ -54,7 +54,8 @@ sim = Simulator(mps_max_bond_dimension=None)
 
 # PRE-TRANSPILING
 qmf = QuantumMedianFilter()
-qmf.generate(sim, color_size, coordinate_size, optimization)
+if generate_flag:
+    qmf.generate(sim, color_size, coordinate_size, optimization)
 
 # EXECUTION
 iteration = 0
