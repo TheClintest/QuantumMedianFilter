@@ -58,7 +58,7 @@ while list(converged_patches.values()).count(False) != 0:
         print("Building the circuit")
         neqr = Circuit.neqr(patch, color_num=color_size, verbose=False)
         neqr_transpiled = sim.transpile(neqr, optimization=0, verbose=True)
-        qmf.prepare_test(np.array(patch), lambda_par, color_size, neqr_transpiled)
+        qmf.prepare(np.array(patch), lambda_par, color_size, neqr_transpiled)
         circuit = qmf.get()
 
         # RUN
