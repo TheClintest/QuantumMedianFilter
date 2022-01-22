@@ -1,0 +1,5 @@
+OPENQASM 2.0;
+include "qelib1.inc";
+qreg x_coor[2];
+cx x_coor[0],x_coor[1];
+x x_coor[0];
