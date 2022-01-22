@@ -20,10 +20,11 @@ coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
 optimization = 0
-
+print("###")
 print(f"COLORSIZE: {color_size}")
 print(f"LAMBDA: {lambda_par}")
 print(f"EPSILON: {epsilon}")
+print("###")
 
 # INPUT DIRECTORY
 input_dir = "./images/"
