@@ -40,7 +40,7 @@ sim = Simulator(mps_max_bond_dimension=None)
 
 # PRE-TRANSPILING
 qmf = QuantumMedianFilter()
-qmf.generate(sim, color_size, coordinate_size, optimization)
+# qmf.generate(sim, color_size, coordinate_size, optimization)
 
 # EXECUTION
 iteration = 0
