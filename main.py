@@ -1,10 +1,24 @@
 from QMF import *
+import sys
+
+opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
+args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
+
+if len(args) != 3:
+    raise SystemExit(f'Usage: {sys.argv[0]} [-g] COLORSIZE LAMBDA EPSILON')
+
+if "-g" in opts:
+    generate = True
+else:
+    generate = False
+
+
 
 # PARAMETERS
-color_size = 4
+color_size = args[0]
 coordinate_size = 2
-lambda_par = 16
-epsilon = 16
+lambda_par = args[1]
+epsilon = args[2]
 optimization = 0
 
 # INPUT DIRECTORY
@@ -40,7 +54,7 @@ sim = Simulator(mps_max_bond_dimension=None)
 
 # PRE-TRANSPILING
 qmf = QuantumMedianFilter()
-# qmf.generate(sim, color_size, coordinate_size, optimization)
+qmf.generate(sim, color_size, coordinate_size, optimization)
 
 # EXECUTION
 iteration = 0
