@@ -23,7 +23,7 @@ def qunion(*qregs: QuantumRegister):
         res += r._bits
     return res
 
-
+# PRINTING
 def print_circuit(circuit, filename: str = None):
     """
     Prints out a representation of a given circuit.
@@ -288,110 +288,6 @@ class Simulator:
             print(answer)
             print("-------------")
         return answer
-
-
-# PRINTING
-def print_circuit(circuit, filename: str = None):
-    """
-    Prints out a representation of a given circuit.
-    If "filename" is provided, it saves the visualization in the file system.
-    :param circuit: Input circuit to visualize
-    :param filename: Path for the output
-    """
-    style = {
-        'displaycolor': {
-            "NEQR": "#FF33FF",
-            "CS+": "#FF0000",
-            "CS-": "#FF8888",
-            "SWAP": "#AAAAFF"
-        },
-        'fontsize': 8
-    }
-    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
-    if filename is not None:
-        plt.savefig(filename)
-    plt.show()
-
-
-# SIMULATOR
-class Simulator:
-    """
-    An Aer Simulator for experimentation.
-    Default setting is "matrix_product_state"
-    """
-
-    simulator = None
-
-    def __init__(self, mps_max_bond_dimension: int = None):
-        if mps_max_bond_dimension is not None:
-            self.simulator = AerSimulator(method="matrix_product_state",
-                                          matrix_product_state_max_bond_dimension=mps_max_bond_dimension)
-        else:
-            self.simulator = AerSimulator(method="matrix_product_state")
-
-    def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None, verbose=False):
-        """
-        Transpile circuit
-        :param circuit: Target circuit to optimize
-        :param optimization: Optimization level for transpiler (0 to 3)
-        :param qasm_filename: If path is given, transpiled qobj will be saved as QASM string on file
-        :return: Transpiled circuit
-        """
-        print(f'Transpiling {circuit.name}')
-        t1 = time.time()
-        qobj = transpile(circuit, self.simulator, optimization_level=optimization)
-        t2 = time.time()
-        duration = t2 - t1
-        if verbose: print(f'Transpiling time: {duration}')
-        if qasm_filename is not None:
-            if verbose: print(f'Saving circuit as {qasm_filename}')
-            save_qasm(qobj, filename=qasm_filename)
-        return qobj
-
-    def simulate(self, circuit: QuantumCircuit, shots=1024, verbose=False):
-        """
-        Simulate experiment
-        :param circuit: A quantum circuit to execute
-        :param shots: Number of experiments
-        :param verbose: Debug printing
-        :return: A dictionary with all results.
-        """
-        print(f'Simulating qobj {circuit.name}')
-        t1 = time.time()
-        results = self.simulator.run(circuit, shots=shots).result()
-        answer = results.get_counts()
-        t2 = time.time()
-        total = t2 - t1
-        if verbose:
-            print("---RESULTS---")
-            print(f"Time:{total}")
-            print(f"Integrity:{len(answer)}")
-            print(answer)
-            print("-------------")
-        return answer
-
-
-# PRINTING
-def print_circuit(circuit, filename: str = None):
-    """
-    Prints out a representation of a given circuit.
-    If "filename" is provided, it saves the visualization in the file system.
-    :param circuit: Input circuit to visualize
-    :param filename: Path for the output
-    """
-    style = {
-        'displaycolor': {
-            "NEQR": "#FF33FF",
-            "CS+": "#FF0000",
-            "CS-": "#FF8888",
-            "SWAP": "#AAAAFF"
-        },
-        'fontsize': 8
-    }
-    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
-    if filename is not None:
-        plt.savefig(filename)
-    plt.show()
 
 
 # CIRCUITS
@@ -1271,26 +1167,3 @@ class QuantumMedianFilter:
         """
 
         return self.circuit
-
-
-# PRINTING
-def print_circuit(circuit, filename: str = None):
-    """
-    Prints out a representation of a given circuit.
-    If "filename" is provided, it saves the visualization in the file system.
-    :param circuit: Input circuit to visualize
-    :param filename: Path for the output
-    """
-    style = {
-        'displaycolor': {
-            "NEQR": "#FF33FF",
-            "CS+": "#FF0000",
-            "CS-": "#FF8888",
-            "SWAP": "#AAAAFF"
-        },
-        'fontsize': 8
-    }
-    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
-    if filename is not None:
-        plt.savefig(filename)
-    plt.show()
