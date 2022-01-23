@@ -55,7 +55,7 @@ for pos in patches.keys():
 
 # SIMULATOR
 print("Setting simulator up")
-sim = Simulator(mps_max_bond_dimension=32)
+sim = Simulator(mps_max_bond_dimension=0)
 
 # PRE-TRANSPILING
 qmf = QuantumMedianFilter()
