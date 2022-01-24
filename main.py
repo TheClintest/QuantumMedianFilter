@@ -91,7 +91,7 @@ while list(converged_patches.values()).count(False) != 0:
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
         qobj = circuit
         print("#---CIRCUIT INFO---")
-        print(f"Qubits: {circuit.qubits.count()}")
+        print(f"Qubits: {len(circuit.qubits)}")
         print("#------------------")
         answer = sim.simulate(qobj, shots=64, verbose=True)
 
