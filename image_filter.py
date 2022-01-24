@@ -21,7 +21,7 @@ file = "gray_8.png"
 new_file = "gray_8_filtered"
 
 image = Image.open(dir + file)
-eps = 16
+eps = 8
 lambda_par = 1
 while lambda_par <= 256:
 
@@ -64,8 +64,8 @@ while lambda_par <= 256:
                 arr[1] = value if x + 1 == x_range else im[x + 1, y]
                 arr[2] = value if y - 1 < 0 else im[x, y - 1]
                 arr[3] = value if y + 1 == y_range else im[x, y + 1]
-                arr[4] = min(value + f1_par, 248)
-                arr[5] = min(value + f2_par, 248)
+                arr[4] = min(value + f1_par, 255)
+                arr[5] = min(value + f2_par, 255)
                 arr[6] = value + f3_par
                 arr[7] = max(value + f4_par, 0)
                 arr[8] = max(value + f5_par, 0)
@@ -80,8 +80,8 @@ while lambda_par <= 256:
                 arr[1] = value if x + 1 == x_range else im[x + 1, y]
                 arr[2] = value if y - 1 < 0 else im[x, y - 1]
                 arr[3] = value if y + 1 == y_range else im[x, y + 1]
-                arr[4] = min(value + f1_par, 248)
-                arr[5] = min(value + f2_par, 248)
+                arr[4] = min(value + f1_par, 255)
+                arr[5] = min(value + f2_par, 255)
                 arr[6] = value + f3_par
                 arr[7] = max(value + f4_par, 0)
                 arr[8] = max(value + f5_par, 0)
