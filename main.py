@@ -86,9 +86,9 @@ while list(converged_patches.values()).count(False) != 0:
         circuit = qmf.get()
 
         # RUN
-        qobj = sim.transpile(circuit, optimization=0, verbose=True)
+        # qobj = sim.transpile(circuit, optimization=0, verbose=True)
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
-        # qobj = circuit
+        qobj = circuit
         answer = sim.simulate(qobj, shots=128, verbose=True)
 
         # OUTPUT
