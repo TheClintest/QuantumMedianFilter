@@ -13,7 +13,7 @@ mps_flag = None
 if "-g" in opts:
     generate_flag = True
 if "-mps" in opts:
-    mps_flag = 32
+    mps_flag = 16
 
 
 
@@ -89,7 +89,10 @@ while list(converged_patches.values()).count(False) != 0:
         # qobj = sim.transpile(circuit, optimization=0, verbose=True)
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
         qobj = circuit
-        answer = sim.simulate(qobj, shots=128, verbose=True)
+        print("#---CIRCUIT INFO---")
+        print(f"{circuit.}")
+        print("#---CIRCUIT INFO---")
+        answer = sim.simulate(qobj, shots=64, verbose=True)
 
         # OUTPUT
         out = patch.copy()
