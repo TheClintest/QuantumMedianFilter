@@ -243,8 +243,7 @@ class Simulator:
                                           max_parallel_threads=48
                                           )
         else:
-            self.simulator = AerSimulator(method="statevector",
-                                          max_parallel_experiments=0,
+            self.simulator = StatevectorSimulator(max_parallel_experiments=0,
                                           max_parallel_threads=48
                                           )
 
