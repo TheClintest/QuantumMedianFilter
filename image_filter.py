@@ -21,7 +21,7 @@ file = "gray_8.png"
 new_file = "gray_8_filtered"
 
 image = Image.open(dir + file)
-
+eps = 16
 lambda_par = 1
 while lambda_par <= 256:
 
@@ -30,7 +30,6 @@ while lambda_par <= 256:
     new_im = im.copy()
     x_range = im.shape[0]
     y_range = im.shape[1]
-    eps = 16
     w0_par = 1
     u_par = 1 / lambda_par
     const_par = (1 / (2 * u_par))
@@ -52,7 +51,7 @@ while lambda_par <= 256:
 
         # Asserting new iteration
         iter += 1
-        print("Processing image with lambda %d. Iteration %d" % (lambda_par, iter))
+        print("Processing image with lambda %d(%d). Iteration %d" % (lambda_par, eps, iter))
         # Set new array
         im = new_im.copy()
 
@@ -65,8 +64,8 @@ while lambda_par <= 256:
                 arr[1] = value if x + 1 == x_range else im[x + 1, y]
                 arr[2] = value if y - 1 < 0 else im[x, y - 1]
                 arr[3] = value if y + 1 == y_range else im[x, y + 1]
-                arr[4] = min(value + f1_par, 240)
-                arr[5] = min(value + f2_par, 240)
+                arr[4] = min(value + f1_par, 248)
+                arr[5] = min(value + f2_par, 248)
                 arr[6] = value + f3_par
                 arr[7] = max(value + f4_par, 0)
                 arr[8] = max(value + f5_par, 0)
@@ -81,8 +80,8 @@ while lambda_par <= 256:
                 arr[1] = value if x + 1 == x_range else im[x + 1, y]
                 arr[2] = value if y - 1 < 0 else im[x, y - 1]
                 arr[3] = value if y + 1 == y_range else im[x, y + 1]
-                arr[4] = min(value + f1_par, 240)
-                arr[5] = min(value + f2_par, 240)
+                arr[4] = min(value + f1_par, 248)
+                arr[5] = min(value + f2_par, 248)
                 arr[6] = value + f3_par
                 arr[7] = max(value + f4_par, 0)
                 arr[8] = max(value + f5_par, 0)

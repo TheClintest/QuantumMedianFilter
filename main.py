@@ -13,7 +13,7 @@ mps_flag = None
 if "-g" in opts:
     generate_flag = True
 if "-mps" in opts:
-    mps_flag = 16
+    mps_flag = 24
 
 
 
@@ -22,7 +22,8 @@ color_size = int(args[0])
 coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
-optimization = 0
+optimization = 3
+
 print("###")
 print(f"COLORSIZE: {color_size}")
 print(f"LAMBDA: {lambda_par}")
@@ -91,6 +92,7 @@ while list(converged_patches.values()).count(False) != 0:
         qobj = circuit
         print("#---CIRCUIT INFO---")
         print(f"Qubits: {circuit.qubits.count()}")
+        print("#------------------")
         answer = sim.simulate(qobj, shots=64, verbose=True)
 
         # OUTPUT
