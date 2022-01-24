@@ -7,10 +7,13 @@ args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
 if len(args) != 3:
     raise SystemExit(f'Usage: {sys.argv[0]} [-g] COLORSIZE LAMBDA EPSILON')
 
+generate_flag = False
+mps_flag = None
+
 if "-g" in opts:
     generate_flag = True
-else:
-    generate_flag = False
+if "-mps" in opts:
+    mps_flag = 32
 
 
 
@@ -43,7 +46,7 @@ images["CHAPLIN"] = "chaplin_64.png"
 filename = images["TEST_8x8"]  # Change This One
 
 # CONVERSION
-print("Converting image into array")
+print(f"Converting image {filename} into array")
 img = Converter.to_array(f'{input_dir}{filename}')
 patcher = ImagePatcher()
 patcher.load_image(img)
@@ -55,7 +58,7 @@ for pos in patches.keys():
 
 # SIMULATOR
 print("Setting simulator up")
-sim = Simulator(mps_max_bond_dimension=32)
+sim = Simulator(mps_max_bond_dimension=mps_flag)
 print(f"Simulator {sim.simulator.name()} is up")
 
 # PRE-TRANSPILING
