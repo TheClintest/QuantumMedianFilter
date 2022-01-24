@@ -797,26 +797,22 @@ class Circuit:
         a7 = QuantumRegister(size, "a7")
         a8 = QuantumRegister(size, "a8")
         a9 = QuantumRegister(size, "a9")
-        res1 = AncillaRegister(2, "e1")
-        res2 = AncillaRegister(2, "e2")
-        res3 = AncillaRegister(2, "e3")
-        anc1 = AncillaRegister(anc_qb, "anc1")
-        anc2 = AncillaRegister(anc_qb, "anc2")
-        anc3 = AncillaRegister(anc_qb, "anc3")
-        circuit = QuantumCircuit(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2, anc3,
+        res = AncillaRegister(2, "e")
+        anc = AncillaRegister(anc_qb, "anc")
+        circuit = QuantumCircuit(a1, a2, a3, a4, a5, a6, a7, a8, a9, res, anc,
                                  name=f'MMM')
         # COMPOSING
         sort = Circuit.sort(size).to_instruction()
         # Row sort
-        circuit.append(sort, qunion(a1, a2, a3, res1, anc1))
-        circuit.append(sort, qunion(a4, a5, a6, res2, anc2))
-        circuit.append(sort, qunion(a7, a8, a9, res3, anc3))
+        circuit.append(sort, qunion(a1, a2, a3, res, anc))
+        circuit.append(sort, qunion(a4, a5, a6, res, anc))
+        circuit.append(sort, qunion(a7, a8, a9, res, anc))
         # Column sort
-        circuit.append(sort, qunion(a1, a4, a7, res1, anc1))
-        circuit.append(sort, qunion(a2, a5, a8, res2, anc2))
-        circuit.append(sort, qunion(a3, a6, a9, res3, anc3))
+        circuit.append(sort, qunion(a1, a4, a7, res, anc))
+        circuit.append(sort, qunion(a2, a5, a8, res, anc))
+        circuit.append(sort, qunion(a3, a6, a9, res, anc))
         # Right diagonal sort
-        circuit.append(sort, qunion(a3, a5, a7, res1, anc1))
+        circuit.append(sort, qunion(a3, a5, a7, res, anc))
         # RETURN
         return circuit
 
@@ -933,19 +929,15 @@ class QuantumMedianFilter:
         a9 = QuantumRegister(col_qb, "a9")
         # ANCILLA REGISTERS
         res1 = AncillaRegister(2, "e1")
-        res2 = AncillaRegister(2, "e2")
-        res3 = AncillaRegister(2, "e3")
         anc1 = AncillaRegister(anc_qb, "anc1")
-        anc2 = AncillaRegister(anc_qb, "anc2")
-        anc3 = AncillaRegister(anc_qb, "anc3")
-        anc4 = AncillaRegister(3, "anc4")
+        anc2 = AncillaRegister(3, "anc2")
         # CLASSICAL REGISTERS
         cm = ClassicalRegister(col_qb, "cm")  # Color Measurement (2)
         xm = ClassicalRegister(pos_qb, "xm")  # X Measurement (1)
         ym = ClassicalRegister(pos_qb, "ym")  # Y Measurement (0)
         # MAIN CIRCUIT
         circuit = QuantumCircuit(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9,  # QUANTUM REGISTERS
-                                 res1, res2, res3, anc1, anc2, anc3, anc4,  # ANCILLA REGISTERS
+                                 res1, anc1, anc2,  # ANCILLA REGISTERS
                                  cm, ym, xm,  # CLASSICAL REGISTERS
                                  name="QuantumMedianFilter"  # NAME
                                  )
@@ -958,9 +950,9 @@ class QuantumMedianFilter:
         mmm = self.loaded_circuits["MMM"]
         swp = self.loaded_circuits["SWAP"]
         # COMPOSITING
-        circuit.compose(prep, qunion(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9, anc4), inplace=True)
+        circuit.compose(prep, qunion(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9, anc2), inplace=True)
         circuit.barrier()
-        circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, res2, res3, anc1, anc2, anc3),
+        circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, a6, a7, a8, a9, res1, anc1,),
                         inplace=True)
         circuit.barrier()
         circuit.compose(swp, qunion(c, a5), inplace=True)
