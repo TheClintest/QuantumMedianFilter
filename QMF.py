@@ -284,8 +284,9 @@ class Simulator:
         if verbose:
             print("---RESULTS---")
             print(f"Time:{total}")
-            print(f"Integrity:{len(answer)}")
-            print(answer)
+            print(f"Integrity: {len(answer)}/16")
+            if len(answer) != 16:
+                print("## WARNING ##")
             print("-------------")
         return answer
 
