@@ -13,7 +13,7 @@ mps_flag = None
 if "-g" in opts:
     generate_flag = True
 if "-mps" in opts:
-    mps_flag = 24
+    mps_flag = 32
 
 
 
@@ -83,7 +83,7 @@ while list(converged_patches.values()).count(False) != 0:
         print("Building the circuit")
         neqr = Circuit.neqr(patch, color_num=color_size, verbose=False)
         neqr_transpiled = sim.transpile(neqr, optimization=0, verbose=True)
-        qmf.prepare(np.array(patch), lambda_par, color_size, neqr_transpiled)
+        qmf.prepare_new(np.array(patch), lambda_par, color_size, neqr_transpiled)
         circuit = qmf.get()
 
         # RUN
@@ -93,7 +93,7 @@ while list(converged_patches.values()).count(False) != 0:
         print("#---CIRCUIT INFO---")
         print(f"Qubits: {len(circuit.qubits)}")
         print("#------------------")
-        answer = sim.simulate(qobj, shots=64, verbose=True)
+        answer = sim.simulate(qobj, shots=128, verbose=True)
 
         # OUTPUT
         out = patch.copy()

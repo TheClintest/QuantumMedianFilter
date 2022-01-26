@@ -23,6 +23,7 @@ def qunion(*qregs: QuantumRegister):
         res += r._bits
     return res
 
+
 # PRINTING
 def print_circuit(circuit, filename: str = None):
     """
@@ -244,8 +245,8 @@ class Simulator:
                                           )
         else:
             self.simulator = StatevectorSimulator(max_parallel_experiments=0,
-                                          max_parallel_threads=48
-                                          )
+                                                  max_parallel_threads=48
+                                                  )
 
     def transpile(self, circuit: QuantumCircuit, optimization=0, qasm_filename=None, verbose=False):
         """
@@ -660,6 +661,39 @@ class Circuit:
 
     # Comparator
     @staticmethod
+    def comparator_new(size, a_name="a", b_name="b", res_name="e"):
+        """
+        This module compares the binary encoding of two registers and stores the result on a third register.
+        The result register can result in:
+            0: A <= B
+            1: A > B
+        :param size: Size of the registers
+        :param a_name: Name of the first register
+        :param b_name: Name of the second register
+        :param res_name: Name of the result register
+        :return: A QuantumCircuit implementing the module
+        """
+        # REGISTERS
+        a = QuantumRegister(size, a_name)
+        b = QuantumRegister(size, b_name)
+        anc = AncillaRegister(1, "anc")
+        res = AncillaRegister(1, res_name)
+        circuit = QuantumCircuit(a, b, res, anc, name="COMP")
+        # COMPOSING
+        for i in range(size):
+            circuit.cx(res, anc)
+            circuit.cx(anc, a[i])
+            circuit.cx(anc, b[i])
+            circuit.x(b[i])
+            circuit.toffoli(b[i], a[i], res)
+            circuit.x(b[i])
+            circuit.cx(anc, a[i])
+            circuit.cx(anc, b[i])
+            circuit.reset(anc)  # 1 ancilla version
+        # RETURN
+        return circuit
+
+    @staticmethod
     def comparator(size, a_name="a", b_name="b", res_name="e"):
         """
         This module compares the binary encoding of two registers and stores the result on a third register.
@@ -715,6 +749,31 @@ class Circuit:
 
     # Swapper
     @staticmethod
+    def swapper_new(size, a_name="a", b_name="b"):
+        """
+        A Swapper is a composite module which "swaps" two registers based on their binary encoding:
+            A > B   --> SWAP
+            A <= B  --> PASS
+        :param size: Size of the register
+        :param a_name: Name of the first register
+        :param b_name: Name of the second register
+        :return: A QuantumCircuit implementing the module
+        """
+        # REGISTERS
+        a = QuantumRegister(size, a_name)
+        b = QuantumRegister(size, b_name)
+        res = AncillaRegister(1, "e")
+        anc = AncillaRegister(1, "anc")
+        circuit = QuantumCircuit(a, b, res, anc, name="SWPPR")
+        # COMPOSING
+        comp = Circuit.comparator_new(size, a_name, b_name, res.name)
+        swp = Circuit.swap(size, a_name, b_name).control()
+        circuit.append(comp.to_instruction(), circuit.qubits)
+        circuit.append(swp, qunion(res, a, b))
+        # RETURN
+        return circuit
+
+    @staticmethod
     def swapper(size, a_name="a", b_name="b"):
         """
         A Swapper is a composite module which "swaps" two registers based on their binary encoding:
@@ -741,6 +800,43 @@ class Circuit:
         return circuit
 
     # Sort Module
+    @staticmethod
+    def sort_new(size, a_name="a", b_name="b", c_name="c"):
+        """
+        This module sorts a set of three registers.
+        :param size: Size of the registers
+        :param a_name: Name of the first register
+        :param b_name: Name of the second register
+        :param c_name: Name of the third register
+        :return: A QuantumCircuit implementing the module
+        """
+        # REGISTERS
+        anc_qb = (size - 1) * 2
+        a = QuantumRegister(size, a_name)
+        b = QuantumRegister(size, b_name)
+        c = QuantumRegister(size, c_name)
+        res = AncillaRegister(1, "e")
+        anc = AncillaRegister(1, "anc")
+        circuit = QuantumCircuit(a, b, c, res, anc, name="SORT")
+        # COMPOSING
+        swppr_ab = Circuit.swapper_new(size, a_name=a_name, b_name=b_name).to_instruction()
+        swppr_ac = Circuit.swapper_new(size, a_name=a_name, b_name=c_name).to_instruction()
+        swppr_bc = Circuit.swapper_new(size, a_name=b_name, b_name=c_name).to_instruction()
+        # Sort A and B
+        circuit.append(swppr_ab, qunion(a, b, res, anc))
+        circuit.reset(res)
+        circuit.reset(anc)
+        # Sort A and C
+        circuit.append(swppr_ac, qunion(a, c, res, anc))
+        circuit.reset(res)
+        circuit.reset(anc)
+        # Sort B and C
+        circuit.append(swppr_bc, qunion(b, c, res, anc))
+        circuit.reset(res)
+        circuit.reset(anc)
+        # RETURN
+        return circuit
+
     @staticmethod
     def sort(size, a_name="a", b_name="b", c_name="c"):
         """
@@ -779,6 +875,42 @@ class Circuit:
         return circuit
 
     # Maximum-Median-Minimum Module
+    @staticmethod
+    def min_med_max_new(size):
+        """
+        A module which sorts its input, which median is finally stored in the center register.
+        :param size: Size of the registers
+        :return: A QuantumCircuit implementing the module
+        """
+        # REGISTERS
+        a1 = QuantumRegister(size, "a1")
+        a2 = QuantumRegister(size, "a2")
+        a3 = QuantumRegister(size, "a3")
+        a4 = QuantumRegister(size, "a4")
+        a5 = QuantumRegister(size, "a5")
+        a6 = QuantumRegister(size, "a6")
+        a7 = QuantumRegister(size, "a7")
+        a8 = QuantumRegister(size, "a8")
+        a9 = QuantumRegister(size, "a9")
+        res = AncillaRegister(1, "e")
+        anc = AncillaRegister(1, "anc")
+        circuit = QuantumCircuit(a1, a2, a3, a4, a5, a6, a7, a8, a9, res, anc,
+                                 name=f'MMM')
+        # COMPOSING
+        sort = Circuit.sort_new(size).to_instruction()
+        # Row sort
+        circuit.append(sort, qunion(a1, a2, a3, res, anc))
+        circuit.append(sort, qunion(a4, a5, a6, res, anc))
+        circuit.append(sort, qunion(a7, a8, a9, res, anc))
+        # Column sort
+        circuit.append(sort, qunion(a1, a4, a7, res, anc))
+        circuit.append(sort, qunion(a2, a5, a8, res, anc))
+        circuit.append(sort, qunion(a3, a6, a9, res, anc))
+        # Right diagonal sort
+        circuit.append(sort, qunion(a3, a5, a7, res, anc))
+        # RETURN
+        return circuit
+
     @staticmethod
     def min_med_max(size):
         """
@@ -860,7 +992,7 @@ class QuantumMedianFilter:
 
     def generate(self, simulator: Simulator, color_size: int, coordinate_size: int, optimization_level=3):
         # Circuits
-        mmm = Circuit.min_med_max(color_size)
+        mmm = Circuit.min_med_max_new(color_size)
         swp = Circuit.swap(color_size)
         cs_w = Circuit.cycleshift_w(coordinate_size)
         cs_a = Circuit.cycleshift_a(coordinate_size)
@@ -871,10 +1003,14 @@ class QuantumMedianFilter:
         # Transpile and save
         self.loaded_circuits["MMM"] = simulator.transpile(mmm, optimization=optimization_level, qasm_filename=mmm.name)
         self.loaded_circuits["SWAP"] = simulator.transpile(swp, optimization=optimization_level, qasm_filename=swp.name)
-        self.loaded_circuits["CSW"] = simulator.transpile(cs_w, optimization=optimization_level, qasm_filename=cs_w.name)
-        self.loaded_circuits["CSA"] = simulator.transpile(cs_a, optimization=optimization_level, qasm_filename=cs_a.name)
-        self.loaded_circuits["CSS"] = simulator.transpile(cs_s, optimization=optimization_level, qasm_filename=cs_s.name)
-        self.loaded_circuits["CSD"] = simulator.transpile(cs_d, optimization=optimization_level, qasm_filename=cs_d.name)
+        self.loaded_circuits["CSW"] = simulator.transpile(cs_w, optimization=optimization_level,
+                                                          qasm_filename=cs_w.name)
+        self.loaded_circuits["CSA"] = simulator.transpile(cs_a, optimization=optimization_level,
+                                                          qasm_filename=cs_a.name)
+        self.loaded_circuits["CSS"] = simulator.transpile(cs_s, optimization=optimization_level,
+                                                          qasm_filename=cs_s.name)
+        self.loaded_circuits["CSD"] = simulator.transpile(cs_d, optimization=optimization_level,
+                                                          qasm_filename=cs_d.name)
         self.loaded_circuits["ADD"] = simulator.transpile(add, optimization=optimization_level, qasm_filename=add.name)
         self.loaded_circuits["SUB"] = simulator.transpile(sub, optimization=optimization_level, qasm_filename=sub.name)
 
@@ -930,6 +1066,85 @@ class QuantumMedianFilter:
         # ANCILLA REGISTERS
         res = AncillaRegister(2, "e")
         anc1 = AncillaRegister(anc_qb, "anc1")
+        anc2 = AncillaRegister(3, "anc2")
+        # CLASSICAL REGISTERS
+        cm = ClassicalRegister(col_qb, "cm")  # Color Measurement (2)
+        xm = ClassicalRegister(pos_qb, "xm")  # X Measurement (1)
+        ym = ClassicalRegister(pos_qb, "ym")  # Y Measurement (0)
+        # MAIN CIRCUIT
+        circuit = QuantumCircuit(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9,  # QUANTUM REGISTERS
+                                 res, anc1, anc2,  # ANCILLA REGISTERS
+                                 cm, ym, xm,  # CLASSICAL REGISTERS
+                                 name="QuantumMedianFilter"  # NAME
+                                 )
+        # CIRCUITS
+        if len(self.loaded_circuits) == 0:
+            print("Loading transpiled circuits")
+            self.load_precompiled_circuits()
+        prep = Circuit.neighborhood_prep(img, f, self.loaded_circuits, color_size=color_size,
+                                         neqr_circuit=neqr_circuit)
+        mmm = self.loaded_circuits["MMM"]
+        swp = self.loaded_circuits["SWAP"]
+        # COMPOSITING
+        circuit.compose(prep, qunion(c, y_coord, x_coord, a1, a2, a3, a4, a5, a6, a7, a8, a9, anc2), inplace=True)
+        circuit.barrier()
+        circuit.compose(mmm, qunion(a1, a2, a3, a4, a5, a6, a7, a8, a9, res, anc1),
+                        inplace=True)
+        circuit.barrier()
+        circuit.compose(swp, qunion(c, a5), inplace=True)
+        circuit.barrier()
+        # MEASUREMENT
+        circuit.measure(c, cm)
+        circuit.measure(y_coord, ym)
+        circuit.measure(x_coord, xm)
+        #
+        self.circuit = circuit
+
+    def prepare_new(self, img: np.array, lambda_par=1, color_size=8, neqr_circuit=None):
+        """
+        Prepare the circuit
+        :param neqr_circuit: If given, this NEQR circuit will be used, avoiding to compose one
+        :param lambda_par: Lambda parameter for filtering
+        :param img: A NumPy image representation
+        :param color_size: Size of the color registers (defult: 8)
+        """
+        # IMAGE PARAMETERS
+        x_range = img.shape[1]  # X size
+        y_range = img.shape[0]  # Y size
+        # QC PARAMETERS
+        col_qb = color_size  # Size of color register
+        pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
+        # FILTER PARAMETERS
+        w0_par = 1
+        u_par = 1 / lambda_par
+        const_par = (1 / (2 * u_par))
+        w1_par = 4 * w0_par - 0 * w0_par
+        w2_par = 3 * w0_par - 1 * w0_par
+        w3_par = 2 * w0_par - 2 * w0_par
+        w4_par = 1 * w0_par - 3 * w0_par
+        w5_par = 0 * w0_par - 4 * w0_par
+        f = dict()
+        f['f1'] = const_par * w1_par
+        f['f2'] = const_par * w2_par
+        f['f3'] = const_par * w3_par
+        f['f4'] = const_par * w4_par
+        f['f5'] = const_par * w5_par
+        # QUANTUM REGISTERS
+        c = QuantumRegister(col_qb, "col")  # Color
+        x_coord = QuantumRegister(pos_qb, "x_coor")  # X coordinates
+        y_coord = QuantumRegister(pos_qb, "y_coor")  # Y coordinates
+        a1 = QuantumRegister(col_qb, "a1")
+        a2 = QuantumRegister(col_qb, "a2")
+        a3 = QuantumRegister(col_qb, "a3")
+        a4 = QuantumRegister(col_qb, "a4")
+        a5 = QuantumRegister(col_qb, "a5")
+        a6 = QuantumRegister(col_qb, "a6")
+        a7 = QuantumRegister(col_qb, "a7")
+        a8 = QuantumRegister(col_qb, "a8")
+        a9 = QuantumRegister(col_qb, "a9")
+        # ANCILLA REGISTERS
+        res = AncillaRegister(1, "e")
+        anc1 = AncillaRegister(1, "anc1")
         anc2 = AncillaRegister(3, "anc2")
         # CLASSICAL REGISTERS
         cm = ClassicalRegister(col_qb, "cm")  # Color Measurement (2)
