@@ -15,14 +15,12 @@ if "-g" in opts:
 if "-mps" in opts:
     mps_flag = 32
 
-
-
 # PARAMETERS
 color_size = int(args[0])
 coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
-optimization = 0
+optimization = 3
 
 print("###")
 print(f"COLORSIZE: {color_size}")
@@ -76,17 +74,16 @@ iteration = 0
 start = time.time()
 while list(converged_patches.values()).count(False) != 0:
 
-
     iteration += 1
-    out = ""
-    out += f'ITER: {iteration}\n'
+    to_print = ""
+    to_print += f'ITER: {iteration}\n'
 
     for pos, patch in patches.items():
 
-        out += f'PATCH: {pos}\n'
+        to_print += f'PATCH: {pos}\n'
 
         # CIRCUIT
-        print(f"\r{out}Building the circuit")
+        print(f"\r{to_print}Building the circuit")
         neqr = Circuit.neqr(patch, color_num=color_size, verbose=False)
         neqr_transpiled = sim.transpile(neqr, optimization=0, verbose=False)
         qmf.prepare_new(np.array(patch), lambda_par, color_size, neqr_transpiled)
@@ -97,11 +94,11 @@ while list(converged_patches.values()).count(False) != 0:
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
         qobj = circuit
         # print_circuit(circuit, f'{circuit_dir}full.png')
-        print(f"\r{out}Simulating the circuit")
+        print(f"\r{to_print}Simulating the circuit")
         answer = sim.simulate(qobj, shots=128, verbose=False)
 
         # OUTPUT
-        print(f"\r{out}Saving the result")
+        print(f"\r{to_print}Saving the result")
         out = patch.copy()
         out = Converter.decode_image(answer, out, color_size=color_size)
         # Converter.to_image(out, filename=f'{output_dir}patch_{pos[0]}{pos[1]}_{iteration}.png')
