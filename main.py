@@ -20,7 +20,7 @@ color_size = int(args[0])
 coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
-optimization = 3
+optimization = 0
 
 print("###")
 print(f"COLORSIZE: {color_size}")
@@ -81,7 +81,7 @@ while list(converged_patches.values()).count(False) != 0:
     for pos, patch in patches.items():
 
         to_patch = f'PATCH: {pos}\n'
-        to_print = f'{to_iter}\n{to_patch}\n'
+        to_print = f'{to_iter}{to_patch}'
 
         # CIRCUIT
         print(f"\r{to_print}Building the circuit")
