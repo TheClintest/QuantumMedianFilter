@@ -67,6 +67,10 @@ qmf = QuantumMedianFilter()
 if generate_flag:
     qmf.generate(sim, color_size, coordinate_size, optimization)
 
+for name, circ in qmf.loaded_circuits.items():
+    pass
+    # print_circuit(circ, f'{circuit_dir}{name}.png')
+
 # EXECUTION
 iteration = 0
 start = time.time()
@@ -90,6 +94,7 @@ while list(converged_patches.values()).count(False) != 0:
         # qobj = sim.transpile(circuit, optimization=0, verbose=True)
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
         qobj = circuit
+        # print_circuit(circuit, f'{circuit_dir}full.png')
         print("#---CIRCUIT INFO---")
         print(f"Qubits: {len(circuit.qubits)}")
         print("#------------------")

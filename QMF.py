@@ -39,11 +39,10 @@ def print_circuit(circuit, filename: str = None):
             "CS-": "#FF8888",
             "SWAP": "#AAAAFF"
         },
-        'fontsize': 8
+        'fontsize': 8,
+        'dpi':20
     }
-    circuit.draw(output="mpl", reverse_bits=False, initial_state=False, style=style, fold=700)
-    if filename is not None:
-        plt.savefig(filename)
+    circuit.draw(output="mpl", reverse_bits=False, filename=filename, initial_state=False, style=style, fold=700)
     plt.show()
 
 
@@ -812,7 +811,6 @@ class Circuit:
         :return: A QuantumCircuit implementing the module
         """
         # REGISTERS
-        anc_qb = (size - 1) * 2
         a = QuantumRegister(size, a_name)
         b = QuantumRegister(size, b_name)
         c = QuantumRegister(size, c_name)
