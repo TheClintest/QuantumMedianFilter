@@ -1161,7 +1161,7 @@ class QuantumMedianFilter:
         if len(self.loaded_circuits) == 0:
             print("Loading transpiled circuits")
             self.load_precompiled_circuits()
-        prep = Circuit.neighborhood_prep_new(img, f, self.loaded_circuits, color_size=color_size,
+        prep = Circuit.neighborhood_prep(img, f, self.loaded_circuits, color_size=color_size,
                                          neqr_circuit=neqr_circuit)
         mmm = self.loaded_circuits["MMM"]
         swp = self.loaded_circuits["SWAP"]
