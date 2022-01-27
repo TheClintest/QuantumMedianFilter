@@ -5,7 +5,7 @@ opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
 args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
 
 if len(args) != 3:
-    raise SystemExit(f'Usage: {sys.argv[0]} [-g] COLORSIZE LAMBDA EPSILON')
+    raise SystemExit(f'Usage: {sys.argv[0]} [-g] LAMBDA EPSILON')
 
 generate_flag = False
 mps_flag = None
@@ -18,11 +18,11 @@ if "-mps" in opts:
 
 
 # PARAMETERS
-color_size = int(args[0])
+color_size = 8
 coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
-optimization = 0
+optimization = 3
 
 print("###")
 print(f"COLORSIZE: {color_size}")
