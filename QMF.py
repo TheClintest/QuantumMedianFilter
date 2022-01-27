@@ -279,7 +279,7 @@ class Simulator:
             print(f'Simulating qobj {circuit.name}')
         t1 = time.time()
         results = self.simulator.run(circuit, shots=shots).result()
-        answer = results.get_counts()
+        answer = results.get_counts(experiment=None)
         t2 = time.time()
         total = t2 - t1
         if verbose:

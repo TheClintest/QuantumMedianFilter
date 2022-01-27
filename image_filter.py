@@ -17,8 +17,8 @@ def testConvergence(image1, image2, tolerance):
 
 
 dir = "./images/"
-file = "gray_8.png"
-new_file = "gray_8_filtered"
+file = "cameraman_128.png"
+new_file = "cameraman_128"
 
 image = Image.open(dir + file)
 eps = 8
@@ -59,10 +59,10 @@ while lambda_par <= 256:
             for x in range(0, x_range):
                 value = im[y][x]
                 arr = np.arange(9)
-                arr[0] = value if x - 1 < 0 else im[x - 1, y]
-                arr[1] = value if x + 1 == x_range else im[x + 1, y]
-                arr[2] = value if y - 1 < 0 else im[x, y - 1]
-                arr[3] = value if y + 1 == y_range else im[x, y + 1]
+                arr[0] = value if x - 1 < 0 else im[y][x - 1]
+                arr[1] = value if x + 1 == x_range else im[y][x + 1]
+                arr[2] = value if y - 1 < 0 else im[y - 1][x]
+                arr[3] = value if y + 1 == y_range else im[y + 1][x]
                 arr[4] = min(value + f1_par, 255)
                 arr[5] = min(value + f2_par, 255)
                 arr[6] = value + f3_par

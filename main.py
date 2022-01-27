@@ -13,7 +13,7 @@ mps_flag = None
 if "-g" in opts:
     generate_flag = True
 if "-mps" in opts:
-    mps_flag = 32
+    mps_flag = 29
 
 # PARAMETERS
 color_size = 8
@@ -73,6 +73,7 @@ for name, circ in qmf.loaded_circuits.items():
 # EXECUTION
 iteration = 0
 start = time.time()
+print(patches)
 while list(converged_patches.values()).count(False) != 0:
 
     iteration += 1
