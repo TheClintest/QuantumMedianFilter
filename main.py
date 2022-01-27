@@ -76,17 +76,19 @@ iteration = 0
 start = time.time()
 while list(converged_patches.values()).count(False) != 0:
 
+
     iteration += 1
+    out = ""
+    out += f'ITER: {iteration}\n'
 
     for pos, patch in patches.items():
 
-        print(f'ITER: {iteration}')
-        print(f'PATCH: {pos}')
+        out += f'PATCH: {pos}\n'
 
         # CIRCUIT
-        print("Building the circuit")
+        print(f"\r{out}Building the circuit")
         neqr = Circuit.neqr(patch, color_num=color_size, verbose=False)
-        neqr_transpiled = sim.transpile(neqr, optimization=0, verbose=True)
+        neqr_transpiled = sim.transpile(neqr, optimization=0, verbose=False)
         qmf.prepare_new(np.array(patch), lambda_par, color_size, neqr_transpiled)
         circuit = qmf.get()
 
@@ -95,12 +97,11 @@ while list(converged_patches.values()).count(False) != 0:
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
         qobj = circuit
         # print_circuit(circuit, f'{circuit_dir}full.png')
-        print("#---CIRCUIT INFO---")
-        print(f"Qubits: {len(circuit.qubits)}")
-        print("#------------------")
-        answer = sim.simulate(qobj, shots=128, verbose=True)
+        print(f"\r{out}Simulating the circuit")
+        answer = sim.simulate(qobj, shots=128, verbose=False)
 
         # OUTPUT
+        print(f"\r{out}Saving the result")
         out = patch.copy()
         out = Converter.decode_image(answer, out, color_size=color_size)
         # Converter.to_image(out, filename=f'{output_dir}patch_{pos[0]}{pos[1]}_{iteration}.png')
