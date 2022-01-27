@@ -5,7 +5,7 @@ opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
 args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
 
 if len(args) != 3:
-    raise SystemExit(f'Usage: {sys.argv[0]} [-g] COLORSIZE LAMBDA EPSILON')
+    raise SystemExit(f'Usage: {sys.argv[0]} [-g] FILENAME LAMBDA EPSILON')
 
 generate_flag = False
 mps_flag = None
@@ -16,7 +16,7 @@ if "-mps" in opts:
     mps_flag = 32
 
 # PARAMETERS
-color_size = int(args[0])
+color_size = 8
 coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
@@ -42,7 +42,7 @@ images["TEST_4x4"] = "gray_4.png"
 images["TEST_8x8"] = "gray_8.png"
 images["GRAY_8x8"] = "gray_shade_8.png"
 images["CHAPLIN"] = "chaplin_64.png"
-filename = images["TEST_8x8"]  # Change This One
+filename = args[0]
 
 # CONVERSION
 print(f"Converting image {filename} into array")
