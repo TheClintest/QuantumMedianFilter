@@ -4,7 +4,7 @@ import sys
 opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
 args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
 
-if len(args) != 3:
+if len(args) != 2:
     raise SystemExit(f'Usage: {sys.argv[0]} [-g] LAMBDA EPSILON')
 
 generate_flag = False
