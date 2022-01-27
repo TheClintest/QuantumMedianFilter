@@ -768,7 +768,7 @@ class Circuit:
         circuit = QuantumCircuit(a, b, res, anc, name="SWPPR")
         # COMPOSING
         comp = Circuit.comparator_new(size, a_name, b_name, res.name)
-        swp = Circuit.swap(size, a_name, b_name).control()
+        swp = Circuit.swap(size, a_name, b_name).control(1, ctrl_state='1')
         circuit.append(comp.to_instruction(), circuit.qubits)
         circuit.append(swp, qunion(res, a, b))
         # RETURN
@@ -1161,7 +1161,7 @@ class QuantumMedianFilter:
         if len(self.loaded_circuits) == 0:
             print("Loading transpiled circuits")
             self.load_precompiled_circuits()
-        prep = Circuit.neighborhood_prep(img, f, self.loaded_circuits, color_size=color_size,
+        prep = Circuit.neighborhood_prep_new(img, f, self.loaded_circuits, color_size=color_size,
                                          neqr_circuit=neqr_circuit)
         mmm = self.loaded_circuits["MMM"]
         swp = self.loaded_circuits["SWAP"]
