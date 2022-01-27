@@ -76,11 +76,12 @@ while list(converged_patches.values()).count(False) != 0:
 
     iteration += 1
     to_print = ""
-    to_print += f'ITER: {iteration}\n'
+    to_iter = f'ITER: {iteration}\n'
 
     for pos, patch in patches.items():
 
-        to_print += f'PATCH: {pos}\n'
+        to_patch = f'PATCH: {pos}\n'
+        to_print = f'{to_iter}\n{to_patch}\n'
 
         # CIRCUIT
         print(f"\r{to_print}Building the circuit")
