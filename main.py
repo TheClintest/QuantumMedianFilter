@@ -20,8 +20,8 @@ if "-mps" in opts:
 # PARAMETERS
 color_size = 8
 coordinate_size = 2
-lambda_par = int(args[1])
-epsilon = int(args[2])
+lambda_par = int(args[0])
+epsilon = int(args[1])
 optimization = 3
 
 print("###")
