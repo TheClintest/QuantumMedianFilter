@@ -109,14 +109,14 @@ while list(converged_patches.values()).count(False) != 0:
     converged_patches = patcher.converged_patches(patches, res, epsilon)
     new = patcher.convert_patches(res)
     output = f'{output_dir}output_{iteration}.png'
-    Converter.to_image(new, filename=output)
+    # Converter.to_image(new, filename=output)
     patcher.load_image(new)
     patches = patcher.get_patches()
     res = patches.copy()  # useless?
 
 end = time.time()
 total_time = end - start
-output = f'{output_dir}output.png'
+output = f'{output_dir}output_{lambda_par}_{epsilon}.png'
 final = patcher.convert_patches(res)
 Converter.to_image(final, filename=output)
 print(f'TOTAL TIME: {total_time}')

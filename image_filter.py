@@ -21,7 +21,7 @@ file = "gray_8.png"
 new_file = "gray_8_filtered"
 
 image = Image.open(dir + file)
-eps = 2
+eps = 8
 lambda_par = 2
 while lambda_par <= 256:
 
