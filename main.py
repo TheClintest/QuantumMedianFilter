@@ -20,7 +20,7 @@ color_size = int(args[0])
 coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
-optimization = 3
+optimization = 1
 
 print("###")
 print(f"COLORSIZE: {color_size}")
@@ -63,6 +63,7 @@ print(f"Simulator {sim.simulator.name()} is up")
 # PRE-TRANSPILING
 qmf = QuantumMedianFilter()
 if generate_flag:
+    print(f'Generating circuits')
     qmf.generate(sim, color_size, coordinate_size, optimization)
 
 for name, circ in qmf.loaded_circuits.items():
