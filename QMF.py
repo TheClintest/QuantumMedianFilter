@@ -255,7 +255,8 @@ class Simulator:
         :param qasm_filename: If path is given, transpiled qobj will be saved as QASM string on file
         :return: Transpiled circuit
         """
-        print(f'Transpiling {circuit.name}')
+        if verbose:
+            print(f'Transpiling {circuit.name}')
         t1 = time.time()
         qobj = transpile(circuit, self.simulator, optimization_level=optimization)
         t2 = time.time()
@@ -274,7 +275,8 @@ class Simulator:
         :param verbose: Debug printing
         :return: A dictionary with all results.
         """
-        print(f'Simulating qobj {circuit.name}')
+        if verbose:
+            print(f'Simulating qobj {circuit.name}')
         t1 = time.time()
         results = self.simulator.run(circuit, shots=shots).result()
         answer = results.get_counts()
