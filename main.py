@@ -84,7 +84,7 @@ while list(converged_patches.values()).count(False) != 0:
         to_print = f'{to_iter} {to_patch} '
 
         # CIRCUIT
-        print(f"\r{to_print}Building the circuit")
+        sys.stdout.write(f"\r{to_print}Building the circuit")
         neqr = Circuit.neqr(patch, color_num=color_size, verbose=False)
         neqr_transpiled = sim.transpile(neqr, optimization=0, verbose=False)
         qmf.prepare_new(np.array(patch), lambda_par, color_size, neqr_transpiled)
@@ -95,11 +95,11 @@ while list(converged_patches.values()).count(False) != 0:
         # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
         qobj = circuit
         # print_circuit(circuit, f'{circuit_dir}full.png')
-        print(f"\r{to_print}Simulating the circuit")
+        sys.stdout.write(f"\r{to_print}Simulating the circuit")
         answer = sim.simulate(qobj, shots=128, verbose=False)
 
         # OUTPUT
-        print(f"\r{to_print}Saving the result")
+        sys.stdout.write(f"\r{to_print}Saving the result")
         out = patch.copy()
         out = Converter.decode_image(answer, out, color_size=color_size)
         # Converter.to_image(out, filename=f'{output_dir}patch_{pos[0]}{pos[1]}_{iteration}.png')
@@ -118,5 +118,5 @@ total_time = end - start
 output = f'{output_dir}output_{lambda_par}_{epsilon}.png'
 final = patcher.convert_patches(res)
 Converter.to_image(final, filename=output)
-print(f'TOTAL TIME: {total_time}')
+print(f'\nTOTAL TIME: {total_time}')
 print(f'FILE: {output}')
