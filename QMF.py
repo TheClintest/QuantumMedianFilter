@@ -566,11 +566,11 @@ class Circuit:
         y_range = img.shape[0]  # Y size
         col_qb = color_size  # Size of color register
         pos_qb = int(math.ceil(math.log(x_range, 2)))  # Size of position registers
-        f1 = int(abs(f['f1'])) >> color_size
-        f2 = int(abs(f['f2'])) >> color_size
-        f3 = int(abs(f['f3'])) >> color_size
-        f4 = int(abs(f['f4'])) >> color_size
-        f5 = int(abs(f['f5'])) >> color_size
+        f1 = int(abs(f['f1'])) >> (8 - color_size)
+        f2 = int(abs(f['f2'])) >> (8 - color_size)
+        f3 = int(abs(f['f3'])) >> (8 - color_size)
+        f4 = int(abs(f['f4'])) >> (8 - color_size)
+        f5 = int(abs(f['f5'])) >> (8 - color_size)
         # QUANTUM REGISTERS
         c = QuantumRegister(col_qb, "col")  # Color
         x = QuantumRegister(pos_qb, "x_coor")  # X coordinates
