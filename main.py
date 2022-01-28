@@ -13,14 +13,14 @@ mps_flag = None
 if "-g" in opts:
     generate_flag = True
 if "-mps" in opts:
-    mps_flag = 256
+    mps_flag = 32
 
 # PARAMETERS
 color_size = 8
 coordinate_size = 2
 lambda_par = int(args[1])
 epsilon = int(args[2])
-optimization = 2
+optimization = 0
 
 print("###")
 print(f"COLORSIZE: {color_size}")
