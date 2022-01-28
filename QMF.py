@@ -241,6 +241,7 @@ class Simulator:
                                           matrix_product_state_max_bond_dimension=mps_max_bond_dimension,
                                           max_parallel_experiments=0,
                                           max_parallel_threads=48,
+                                          zero_threshold=1e-50
                                           # mps_log_data=True
                                           )
         else:
