@@ -240,7 +240,8 @@ class Simulator:
             self.simulator = AerSimulator(method="matrix_product_state",
                                           matrix_product_state_max_bond_dimension=mps_max_bond_dimension,
                                           max_parallel_experiments=0,
-                                          max_parallel_threads=48
+                                          max_parallel_threads=48,
+                                          mps_log_data=True
                                           )
         else:
             self.simulator = StatevectorSimulator(max_parallel_experiments=0,
