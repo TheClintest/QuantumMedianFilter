@@ -291,8 +291,6 @@ class Simulator:
             print("-------------")
         if len(answer) != 16:
             print("## WARNING ##")
-            print("## WARNING ##")
-            print("## WARNING ##")
         return answer
 
 
