@@ -13,7 +13,7 @@ mps_flag = None
 if "-g" in opts:
     generate_flag = True
 if "-mps" in opts:
-    mps_flag = 16
+    mps_flag = 64
 
 # PARAMETERS
 color_size = 8

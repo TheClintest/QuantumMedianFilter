@@ -286,9 +286,11 @@ class Simulator:
             print("---RESULTS---")
             print(f"Time:{total}")
             print(f"Integrity: {len(answer)}/16")
-            if len(answer) != 16:
-                print("## WARNING ##")
             print("-------------")
+        if len(answer) != 16:
+            print("## WARNING ##")
+            print("## WARNING ##")
+            print("## WARNING ##")
         return answer
 
 
