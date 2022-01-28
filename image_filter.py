@@ -21,7 +21,7 @@ file = "cameraman_128.png"
 new_file = "cameraman_128"
 
 image = Image.open(dir + file)
-eps = 8
+eps = 16
 lambda_par = 2
 while lambda_par <= 256:
 
