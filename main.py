@@ -121,6 +121,7 @@ while not converged:
             post_img[y][x] = out
 
     # End iteration
+    sys.stdout.write(f"\r{to_print}Iteration completed        ")
     end_iter = time.time()
     duration_iter = end_iter - start_iter
     print(f'\nITERATION TIME: {duration_iter}')
