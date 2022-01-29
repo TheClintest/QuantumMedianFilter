@@ -1,10 +1,11 @@
 from PIL import Image
 import numpy as np
+import random
 
 
 def testConvergence(image1, image2, tolerance):
-    x_range = image1.shape[0]
-    y_range = image1.shape[1]
+    x_range = image1.shape[1]
+    y_range = image1.shape[0]
     for x in range(0, x_range):
         for y in range(0, y_range):
             val1 = int(image1[y][x])
@@ -15,22 +16,44 @@ def testConvergence(image1, image2, tolerance):
                 return False
     return True
 
+def add_salt_pepper(image: np.array, n):
+    x_range = image.shape[1]
+    y_range = image.shape[0]
+    res = image.copy()
+    for i in range(n):
+        black = random.randint(0, 1)
+        x = random.randrange(0, x_range)
+        y = random.randrange(0, y_range)
+        if black == 1:
+            res[y][x] = 0
+        else:
+            res[y][x] = 255
+    return res
 
 dir = "./images/"
-file = "cameraman_128.png"
-new_file = "cameraman_128"
+nome = "zebra"
+file = f"{nome}.png"
+new_file = nome
 
 image = Image.open(dir + file)
-eps = 8
-lambda_par = 2
-while lambda_par <= 256:
+im = np.array(image.convert("L"))
+salt_pepper = True
+if salt_pepper:
+    salt_im = add_salt_pepper(im, 128)
+    Image.fromarray(salt_im).save("%s%s_sp.png" % (dir, new_file))
+eps = 6
+lambda_par = 4
+while lambda_par <= 64:
 
     # Parameters
-    im = np.array(image.convert("L"))
+    if salt_pepper:
+        im = salt_im.copy()
+    else:
+        im = np.array(image.convert("L"))
     new_im = im.copy()
 
-    x_range = im.shape[0]
-    y_range = im.shape[1]
+    x_range = im.shape[1]
+    y_range = im.shape[0]
     w0_par = 1
     u_par = 1 / lambda_par
     const_par = (1 / (2 * u_par))

@@ -50,8 +50,7 @@ print("###")
 # INPUT DIRECTORY
 input_dir = "./images/"
 # OUTPUT DIRECTORY
-output_dir = "./images/test/"
-circuit_dir = "./images/circuits/"
+output_dir = "images/output/"
 qasm_dir = "./qasm/"
 
 # IMAGE

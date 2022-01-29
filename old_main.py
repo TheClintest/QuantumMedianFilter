@@ -31,7 +31,7 @@ print("###")
 # INPUT DIRECTORY
 input_dir = "./images/"
 # OUTPUT DIRECTORY
-output_dir = "./images/test/"
+output_dir = "images/output/"
 circuit_dir = "./images/circuits/"
 qasm_dir = "./qasm/"
 
