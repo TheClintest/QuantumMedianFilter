@@ -21,13 +21,14 @@ file = "cameraman_128.png"
 new_file = "cameraman_128"
 
 image = Image.open(dir + file)
-eps = 16
+eps = 8
 lambda_par = 2
 while lambda_par <= 256:
 
     # Parameters
     im = np.array(image.convert("L"))
     new_im = im.copy()
+
     x_range = im.shape[0]
     y_range = im.shape[1]
     w0_par = 1
@@ -38,11 +39,11 @@ while lambda_par <= 256:
     w3_par = 2 * w0_par - 2 * w0_par
     w4_par = 1 * w0_par - 3 * w0_par
     w5_par = 0 * w0_par - 4 * w0_par
-    f1_par = const_par * w1_par
-    f2_par = const_par * w2_par
-    f3_par = const_par * w3_par
-    f4_par = const_par * w4_par
-    f5_par = const_par * w5_par
+    f1_par = int(const_par * w1_par)
+    f2_par = int(const_par * w2_par)
+    f3_par = int(const_par * w3_par)
+    f4_par = int(const_par * w4_par)
+    f5_par = int(const_par * w5_par)
 
     # Algorithm
     iter = 0
@@ -57,12 +58,12 @@ while lambda_par <= 256:
 
         for y in range(0, y_range):
             for x in range(0, x_range):
-                value = im[y][x]
+                value = new_im[y][x]
                 arr = np.arange(9)
-                arr[0] = value if x - 1 < 0 else im[y][x - 1]
-                arr[1] = value if x + 1 == x_range else im[y][x + 1]
-                arr[2] = value if y - 1 < 0 else im[y - 1][x]
-                arr[3] = value if y + 1 == y_range else im[y + 1][x]
+                arr[0] = value if x - 1 < 0 else new_im[y][x - 1]
+                arr[1] = value if x + 1 == x_range else new_im[y][x + 1]
+                arr[2] = value if y - 1 < 0 else new_im[y - 1][x]
+                arr[3] = value if y + 1 == y_range else new_im[y + 1][x]
                 arr[4] = min(value + f1_par, 255)
                 arr[5] = min(value + f2_par, 255)
                 arr[6] = value + f3_par

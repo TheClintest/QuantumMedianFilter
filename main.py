@@ -1,6 +1,25 @@
 from QMF import *
 import sys
 
+
+# ----------------------------------------------------------------
+def testConvergence(image1, image2, tolerance):
+    x_range = image1.shape[0]
+    y_range = image1.shape[1]
+    for x in range(0, x_range):
+        for y in range(0, y_range):
+            val1 = int(image1[y][x])
+            val2 = int(image2[y][x])
+            res = abs(val2 - val1)
+            if (res > tolerance):
+                # print("CONVERGENCE %d/%d"%(res,tolerance))
+                return False
+    return True
+
+
+# ----------------------------------------------------------------
+
+
 opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
 args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
 
@@ -13,7 +32,7 @@ mps_flag = None
 if "-g" in opts:
     generate_flag = True
 if "-mps" in opts:
-    mps_flag = 14
+    mps_flag = 32
 
 # PARAMETERS
 color_size = 8
@@ -36,12 +55,6 @@ circuit_dir = "./images/circuits/"
 qasm_dir = "./qasm/"
 
 # IMAGE
-images = dict()
-images["TEST_2x2"] = "gray_2.png"
-images["TEST_4x4"] = "gray_4.png"
-images["TEST_8x8"] = "gray_8.png"
-images["GRAY_8x8"] = "gray_shade_8.png"
-images["CHAPLIN"] = "chaplin_64.png"
 filename = args[0]
 
 # CONVERSION
@@ -49,11 +62,6 @@ print(f"Converting image {filename} into array")
 img = Converter.to_array(f'{input_dir}{filename}')
 patcher = ImagePatcher()
 patcher.load_image(img)
-patches = patcher.get_patches()
-res = patches.copy()
-converged_patches = dict()
-for pos in patches.keys():
-    converged_patches[pos] = False
 
 # SIMULATOR
 print("Setting simulator up")
@@ -66,58 +74,72 @@ if generate_flag:
     print(f'Generating circuits')
     qmf.generate(sim, color_size, coordinate_size, optimization)
 
-for name, circ in qmf.loaded_circuits.items():
-    pass
-    # print_circuit(circ, f'{circuit_dir}{name}.png')
-
 # EXECUTION
 iteration = 0
-start = time.time()
-while list(converged_patches.values()).count(False) != 0:
+converged = False
+start_all = time.time()
 
+while not converged:
+
+    # Prepare iteration
+    start_iter = time.time()
     iteration += 1
+    pre_img = patcher.get_image()
+    post_img = pre_img.copy()
     to_print = ""
     to_iter = f'ITER: {iteration}'
 
-    for pos, patch in patches.items():
+    # Execute for each pixel
+    for y in range(1, post_img.shape[0] - 1):
+        for x in range(1, post_img.shape[1] - 1):
+            to_patch = f'PIXEL: ({y - 1}, {x - 1})'
+            to_print = f'{to_iter} {to_patch} '
 
-        to_patch = f'PATCH: {pos}'
-        to_print = f'{to_iter} {to_patch} '
+            # Get neighbors
+            neighborhood = dict()
+            neighborhood["CNTR"] = post_img[y][x]
+            neighborhood["UP"] = post_img[y - 1][x]
+            neighborhood["DWN"] = post_img[y + 1][x]
+            neighborhood["LFT"] = post_img[y][x - 1]
+            neighborhood["RGHT"] = post_img[y][x + 1]
 
-        # CIRCUIT
-        sys.stdout.write(f"\r{to_print}Building the circuit     ")
-        neqr = Circuit.neqr(patch, color_num=color_size, verbose=False)
-        neqr_transpiled = sim.transpile(neqr, optimization=0, verbose=False)
-        qmf.prepare_new(np.array(patch), lambda_par, color_size, neqr_transpiled)
-        circuit = qmf.get()
+            # Prepare circuit
+            qmf.prepare(neighborhood, lambda_par, color_size)
+            circuit = qmf.get()
 
-        # RUN
-        # qobj = sim.transpile(circuit, optimization=0, verbose=True)
-        # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
-        qobj = circuit
-        # print_circuit(circuit, f'{circuit_dir}full.png')
-        sys.stdout.write(f"\r{to_print}Simulating the circuit       ")
-        answer = sim.simulate(qobj, shots=128, verbose=False)
+            # Run
+            # qobj = sim.transpile(circuit, optimization=0, verbose=True)
+            # qobj = load_qasm(f'{qasm_dir}{circuit.name}')
+            qobj = circuit
+            # print_circuit(circuit, f'{circuit_dir}full.png')
+            sys.stdout.write(f"\r{to_print}Simulating the circuit       ")
+            answer = sim.simulate(qobj, verbose=False)
 
-        # OUTPUT
-        sys.stdout.write(f"\r{to_print}Saving the result        ")
-        out = patch.copy()
-        out = Converter.decode_image(answer, out, color_size=color_size)
-        # Converter.to_image(out, filename=f'{output_dir}patch_{pos[0]}{pos[1]}_{iteration}.png')
-        res[pos] = out
+            # OUTPUT
+            sys.stdout.write(f"\r{to_print}Inserting the result        ")
+            out = Converter.decode_pixel(answer, color_size=color_size)
+            post_img[y][x] = out
 
-    converged_patches = patcher.converged_patches(patches, res, epsilon)
-    new = patcher.convert_patches(res)
-    output = f'{output_dir}output_{iteration}.png'
-    # Converter.to_image(new, filename=output)
-    patcher.load_image(new)
-    patches = patcher.get_patches()
-    res = patches.copy()  # useless?
+    # End iteration
+    end_iter = time.time()
+    duration_iter = end_iter - start_iter
+    print(f'\nITERATION TIME: {duration_iter}')
 
-end = time.time()
-total_time = end - start
+    # Check convergence
+    pre_img = pre_img[1: pre_img.shape[0] - 1, 1: pre_img.shape[1] - 1]
+    post_img = post_img[1: post_img.shape[0] - 1, 1: post_img.shape[1] - 1]
+    converged = testConvergence(pre_img, post_img, epsilon)
+
+    # Prepare image
+    patcher.load_image(post_img)
+
+# Print time
+end_all = time.time()
+duration_all = end_all - start_all
+print(f'\nTOTAL TIME: {duration_all}')
+
+# Save file
 output = f'{output_dir}output_{lambda_par}_{epsilon}.png'
-final = patcher.convert_patches(res)
+final = post_img
 Converter.to_image(final, filename=output)
-print(f'\nTOTAL TIME: {total_time}')
 print(f'FILE: {output}')
