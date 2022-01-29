@@ -54,7 +54,7 @@ output_dir = "images/output/"
 qasm_dir = "./qasm/"
 
 # IMAGE
-filename = args[0]
+filename = f'{args[0]}.png'
 
 # CONVERSION
 print(f"Converting image {filename} into array")
@@ -139,7 +139,7 @@ duration_all = end_all - start_all
 print(f'\nTOTAL TIME: {duration_all}')
 
 # Save file
-output = f'{output_dir}output_{lambda_par}_{epsilon}.png'
+output = f'{output_dir}{args[0]}_{lambda_par}_{epsilon}.png'
 final = post_img
 Converter.to_image(final, filename=output)
 print(f'FILE: {output}')
