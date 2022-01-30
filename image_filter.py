@@ -30,10 +30,10 @@ def add_salt_pepper(image: np.array, n):
             res[y][x] = 255
     return res
 
-salt_pepper = True
+salt_pepper = False
 
 dir = "./images/"
-nome = "zebra"
+nome = "lena"
 file = f"{nome}.png"
 if salt_pepper:
     new_file = f'{nome}_sp'
@@ -44,10 +44,10 @@ image = Image.open(dir + file)
 im = np.array(image.convert("L"))
 if salt_pepper:
     salt_im = add_salt_pepper(im, 128)
-    Image.fromarray(salt_im).save("%s%s_sp.png" % (dir, new_file))
-eps = 4
+    Image.fromarray(salt_im).save("%s%s_sp.png" % (dir, file))
+eps = 128
 lambda_par = 4
-while lambda_par <= 64:
+while lambda_par <= 128:
 
     # Parameters
     if salt_pepper:
