@@ -78,7 +78,7 @@ iteration = 0
 converged = False
 start_all = time.time()
 
-while not converged or iteration < 24:
+while not converged and iteration < 24:
 
     # Prepare iteration
     start_iter = time.time()
