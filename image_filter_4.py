@@ -3,18 +3,34 @@ import numpy as np
 import random
 
 
-def testConvergence(image1, image2, tolerance):
-    x_range = image1.shape[1]
-    y_range = image1.shape[0]
+# ----------------------------------------------------------------
+def norm_1(img: np.array):
+    res = 0
+    x_range = img.shape[1]
+    y_range = img.shape[0]
     for x in range(0, x_range):
         for y in range(0, y_range):
-            val1 = int(image1[y][x])
-            val2 = int(image2[y][x])
-            res = abs(val2 - val1)
-            if (res > tolerance):
-                # print("CONVERGENCE %d/%d"%(res,tolerance))
-                return False
-    return True
+            res += (int(img[y][x])) ** 2
+    return res
+
+
+def norm_2(img: np.array, img_old: np.array):
+    res = 0
+    x_range = img.shape[1]
+    y_range = img.shape[0]
+    for x in range(0, x_range):
+        for y in range(0, y_range):
+            res += (int(img[y][x]) - int(img_old[y][x])) ** 2
+    return res
+
+
+# ----------------------------------------------------------------
+def testConvergence(image1, image2, tolerance):
+    val = norm_2(image1, image2) / norm_1(image1)
+    return val <= tolerance
+
+
+# ----------------------------------------------------------------
 
 def add_salt_pepper(image: np.array, n):
     x_range = image.shape[1]
@@ -30,7 +46,7 @@ def add_salt_pepper(image: np.array, n):
             res[y][x] = 255
     return res
 
-salt_pepper = False
+salt_pepper = True
 
 dir = "./images/"
 nome = "lena"
@@ -43,11 +59,11 @@ else:
 image = Image.open(dir + file)
 im = np.array(image.convert("L"))
 if salt_pepper:
-    salt_im = add_salt_pepper(im, 128)
-    Image.fromarray(salt_im).save("%s%s_sp.png" % (dir, file))
-eps = 128
-lambda_par = 4
-while lambda_par <= 128:
+    salt_im = add_salt_pepper(im, 512)
+    Image.fromarray(salt_im).save("%s%s_sp.png" % (dir, nome))
+eps = 0.00001
+lambda_par = 2
+while lambda_par <= 256:
 
     # Parameters
     if salt_pepper:
@@ -85,12 +101,12 @@ while lambda_par <= 128:
 
         for y in range(0, y_range):
             for x in range(0, x_range):
-                value = new_im[y][x]
+                value = im[y][x]
                 arr = np.arange(9)
-                arr[0] = value if x - 1 < 0 else new_im[y][x - 1]
-                arr[1] = value if x + 1 == x_range else new_im[y][x + 1]
-                arr[2] = value if y - 1 < 0 else new_im[y - 1][x]
-                arr[3] = value if y + 1 == y_range else new_im[y + 1][x]
+                arr[0] = value if x - 1 < 0 else im[y][x - 1]
+                arr[1] = value if x + 1 == x_range else im[y][x + 1]
+                arr[2] = value if y - 1 < 0 else im[y - 1][x]
+                arr[3] = value if y + 1 == y_range else im[y + 1][x]
                 arr[4] = min(value + f1_par, 255)
                 arr[5] = min(value + f2_par, 255)
                 arr[6] = value + f3_par
