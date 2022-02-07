@@ -1,36 +1,10 @@
 from PIL import Image
+from filtering_4 import *
 import numpy as np
 import random
+import sys
+import matplotlib.pyplot as plt
 
-
-# ----------------------------------------------------------------
-def norm_1(img: np.array):
-    res = 0
-    x_range = img.shape[1]
-    y_range = img.shape[0]
-    for x in range(0, x_range):
-        for y in range(0, y_range):
-            res += (int(img[y][x])) ** 2
-    return res
-
-
-def norm_2(img: np.array, img_old: np.array):
-    res = 0
-    x_range = img.shape[1]
-    y_range = img.shape[0]
-    for x in range(0, x_range):
-        for y in range(0, y_range):
-            res += (int(img[y][x]) - int(img_old[y][x])) ** 2
-    return res
-
-
-# ----------------------------------------------------------------
-def testConvergence(image1, image2, tolerance):
-    val = norm_2(image1, image2) / norm_1(image1)
-    return val <= tolerance
-
-
-# ----------------------------------------------------------------
 
 def add_salt_pepper(image: np.array, n):
     x_range = image.shape[1]
@@ -46,95 +20,120 @@ def add_salt_pepper(image: np.array, n):
             res[y][x] = 255
     return res
 
-salt_pepper = False
 
+def add_gaussian(image: np.array, n_med, n_sigma):
+    res = image.copy()
+    x_range = image.shape[1]
+    y_range = image.shape[0]
+
+    noise = np.random.randn(y_range, x_range)
+    noise = noise * n_sigma
+    res = res + noise
+    return res
+
+
+def rmse(start_image, end_image):
+    x_range = start_image.shape[1]
+    y_range = start_image.shape[0]
+    res = norm_2(start_image, end_image)
+    res = res / (x_range * y_range)
+    res = pow(res, 1 / 2)
+    return res
+
+
+# ----------------------------------------------------------------
+
+# Checking input parameters
+opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
+args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
+
+sp_flag = False
+g_flag = False
+all_flag = False
+
+if "-sp" in opts:
+    sp_flag = True
+if "-g" in opts:
+    g_flag = True
+if "-a" in opts:
+    all_flag = True
+
+# Preparation
 dir = "./images/"
-nome = "lena_sp"
+nome = args[0]
 file = f"{nome}.png"
-if salt_pepper:
-    new_file = f'{nome}_sp'
-else:
-    new_file = nome
+salted_file = f'{nome}_sp'
+gaussian_file = f'{nome}_g'
+new_file = f'{nome}'
 
+# Loading image and noise addition
 image = Image.open(dir + file)
-im = np.array(image.convert("L"))
-if salt_pepper:
-    salt_im = add_salt_pepper(im, 512)
+orig_im = np.array(image.convert("L"))
+# plt.imshow(im, cmap='gray', vmin=0, vmax=255)
+if sp_flag or all_flag:
+    salt_im = add_salt_pepper(orig_im, 3500)
     Image.fromarray(salt_im).save("%s%s_sp.png" % (dir, nome))
-eps = 0.00001
+if g_flag or all_flag:
+    gauss_image = add_gaussian(orig_im, 0, 15)
+    # plt.imshow(gauss_image, cmap='gray', vmin=0, vmax=255)
+    gauss_tosave = np.array(gauss_image, dtype=np.uint8)
+    Image.fromarray(gauss_tosave).save("%s%s_g.png" % (dir, nome))
+
+# Parameters
+images_to_filter = dict()
+if sp_flag or all_flag:
+    images_to_filter["SP"] = salt_im.copy()
+if g_flag or all_flag:
+    images_to_filter["GAUSS"] = gauss_image.copy()
+if not sp_flag and not g_flag:
+    images_to_filter["NORM"] = orig_im.copy()
+
+# -----------------
+tolerance = 0.0001
 lambda_par = 2
-while lambda_par <= 256:
+max_lambda = 512
+# -----------------
 
-    # Parameters
-    if salt_pepper:
-        im = salt_im.copy()
-    else:
-        im = np.array(image.convert("L"))
-    new_im = im.copy()
+# Preparing results
+results = dict()
+temp = lambda_par
+while temp <= max_lambda:
+    results[str(temp)] = list()
+    temp = temp * 2
 
-    x_range = im.shape[1]
-    y_range = im.shape[0]
-    w0_par = 1
-    w1_par = 1/(2**(1/2))
-    u_par = 1 / lambda_par
-    const_par = (1 / (2 * u_par))
-    w1_val = 4 * w0_par - 0 * w0_par
-    w2_val = 4 * w1_par - 0 * w1_par
-    w3_val = 3 * w0_par - 1 * w0_par
-    w4_val = 3 * w1_par - 1 * w1_par
-    w5_val = 2 * w0_par - 2 * w0_par
-    w6_val = 1 * w0_par - 3 * w0_par
-    w7_val = 1 * w1_par - 3 * w1_par
-    w8_val = 0 * w0_par - 4 * w0_par
-    w9_val = 0 * w1_par - 4 * w1_par
-    f1_val = int(const_par * w1_val)
-    f2_val = int(const_par * w2_val)
-    f3_val = int(const_par * w3_val)
-    f4_val = int(const_par * w4_val)
-    f5_val = int(const_par * w5_val)
-    f6_val = int(const_par * w6_val)
-    f7_val = int(const_par * w7_val)
-    f8_val = int(const_par * w8_val)
-    f9_val = int(const_par * w9_val)
+for label, im in images_to_filter.items():
 
-    # Algorithm
-    iter = 0
-    has_converged = False
-    while not has_converged:
+    lambda_temp = lambda_par
+    print("###")
+    print(f"Elaborating {label}")
+    print("###")
 
-        # Asserting new iteration
-        iter += 1
-        print("Processing image with lambda %d(%d). Iteration %d" % (lambda_par, eps, iter))
-        # Set new array
-        im = new_im.copy()
+    while lambda_temp <= max_lambda:
 
-        for y in range(0, y_range):
-            for x in range(0, x_range):
-                value = new_im[y][x]
-                arr = np.arange(17)
-                arr[0] = value if x - 1 < 0 else new_im[y][x - 1]
-                arr[1] = value if x + 1 == x_range else new_im[y][x + 1]
-                arr[2] = value if y - 1 < 0 else new_im[y - 1][x]
-                arr[3] = value if y + 1 == y_range else new_im[y + 1][x]
-                arr[4] = value if (x - 1 < 0 or y - 1 < 0) else new_im[y - 1][x - 1]
-                arr[5] = value if (x + 1 == x_range or y - 1 < 0) else new_im[y - 1][x + 1]
-                arr[6] = value if (x - 1 < 0 or y + 1 == y_range) else new_im[y + 1][x - 1]
-                arr[7] = value if (x + 1 == x_range or y + 1 == y_range) else new_im[y + 1][x + 1]
-                arr[8] = min(value + f1_val, 255)
-                arr[9] = min(value + f2_val, 255)
-                arr[10] = min(value + f3_val, 255)
-                arr[11] = min(value + f4_val, 255)
-                arr[12] = value + f5_val
-                arr[13] = max(value + f6_val, 0)
-                arr[14] = max(value + f7_val, 0)
-                arr[15] = max(value + f8_val, 0)
-                arr[16] = max(value + f9_val, 0)
-                new_im[y][x] = np.median(arr)
+        new_im = filter_8(im, lambda_temp, tolerance)
 
-        # Check Convergence
-        has_converged = testConvergence(im, new_im, eps)
+        # Saving file
+        if label == "GAUSS":
+            new_save = np.array(new_im, dtype=np.uint8)
+            new_image = Image.fromarray(new_save)
+        else:
+            new_image = Image.fromarray(new_im)
 
-    new_image = Image.fromarray(new_im)
-    new_image.save("%sfiltered/%s_%d.png" % (dir, new_file, lambda_par))
-    lambda_par = lambda_par * 2
+        if label == "NORM":
+            new_image.save("%sfiltered/%s_%d.png" % (dir, new_file, lambda_temp))
+        if label == "SP":
+            new_image.save("%sfiltered/%s_%d.png" % (dir, salted_file, lambda_temp))
+        if label == "GAUSS":
+            new_image.save("%sfiltered/%s_%d.png" % (dir, gaussian_file, lambda_temp))
 
+        # Saving RMSE
+        results[str(lambda_temp)].append(rmse(orig_im, np.array(new_im, dtype=np.uint8)))
+
+        # Refresh
+        lambda_temp = lambda_temp * 2
+
+# Plotting results
+x_axis = list(results.keys())
+y_axis = list(results.values())
+plt.plot(x_axis, y_axis)
+plt.show()
