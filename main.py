@@ -5,7 +5,7 @@ opts = [opt for opt in sys.argv[1:] if opt.startswith("-")]
 args = [arg for arg in sys.argv[1:] if not arg.startswith("-")]
 
 if len(args) != 3:
-    raise SystemExit(f'Usage: {sys.argv[0]} [-g] FILENAME LAMBDA EPSILON')
+    raise SystemExit(f'Usage: {sys.argv[0]} [-g -mps -d] FILENAME LAMBDA EPSILON')
 
 generate_flag = False
 denoise_flag = False
@@ -20,7 +20,7 @@ if "-d" in opts:
 
 # PARAMETERS
 color_size = 8
-lambda_par = int(args[1])
+lambda_par = float(args[1])
 epsilon = float(args[2])
 
 print("###")

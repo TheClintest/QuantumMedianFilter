@@ -28,22 +28,22 @@ def generate_circuits(patches: dict, image, lambda_par, quantumfilter: QuantumMe
 
 # ----------------------------------------------------------------
 def norm_1(img: numpy.array):
-    res = 0
+    res = 0.0
     x_range = img.shape[1]
     y_range = img.shape[0]
     for x in range(0, x_range):
         for y in range(0, y_range):
-            res += int(img[y][x]) ** 2
+            res += float(img[y][x]) ** 2
     return res
 
 
 def norm_2(img: numpy.array, img_old: numpy.array):
-    res = 0
+    res = 0.0
     x_range = img.shape[1]
     y_range = img.shape[0]
     for x in range(0, x_range):
         for y in range(0, y_range):
-            res += (int(img[y][x]) - int(img_old[y][x])) ** 2
+            res += (float(img[y][x]) - float(img_old[y][x])) ** 2
     return res
 
 
