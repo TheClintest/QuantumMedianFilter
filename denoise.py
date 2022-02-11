@@ -77,7 +77,7 @@ def denoise(original_image: np.array, mps_flag, generate_flag, color_size, coord
     converged = False
     start_all = time.time()
 
-    while not converged and iteration < 1:
+    while not converged and iteration < 8:
 
         # Prepare iteration
         start_iter = time.time()
@@ -126,7 +126,7 @@ def denoise(original_image: np.array, mps_flag, generate_flag, color_size, coord
 
 
         # End iteration
-        sys.stdout.write(f"\r{to_iter} Iteration completed      ")
+        sys.stdout.write(f"\r{to_iter} Iteration completed")
         end_iter = time.time()
         duration_iter = end_iter - start_iter
         print(f'\nITERATION TIME: {duration_iter}')
