@@ -77,7 +77,7 @@ def denoise(original_image: np.array, mps_flag, generate_flag, color_size, coord
     converged = False
     start_all = time.time()
 
-    while not converged and iteration < 8:
+    while not converged and iteration < 10:
 
         # Prepare iteration
         start_iter = time.time()

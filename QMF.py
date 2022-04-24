@@ -37,12 +37,21 @@ def print_circuit(circuit, filename: str = None):
             "NEQR": "#FF33FF",
             "CS+": "#FF0000",
             "CS-": "#FF8888",
-            "SWAP": "#AAAAFF"
+            "SWAP": "#AAAAFF",
+            "Neighborhood Preparation": "#33BB33",
+            "p-values Computation": "#BB3333",
+            "Median Function": "#BB5555",
+            "PCN": "#AAAA11",
+            "ADD": "#55FF55",
+            "SWPPR": "#55FF55",
+            "COMP": "#5555FF",
+            "c_SWAP": "#FF5555",
+            "SUB": "#FF5555"
         },
-        'fontsize': 8,
-        'dpi': 20
+        'fontsize': 12,
+        'dpi': 300
     }
-    circuit.draw(output="mpl", reverse_bits=False, filename=filename, initial_state=False, style=style, fold=700)
+    circuit.draw(output="mpl", reverse_bits=False, filename=filename, initial_state=False, style=style, fold=700, vertical_compression="high")
     plt.show()
 
 
@@ -389,6 +398,70 @@ class Circuit:
         # RETURN
         return qc
 
+    @staticmethod
+    def neqr_new(imageArray, color_num=8, verbose=False):
+        """
+        Encodes the loaded array into a NEQR circuit
+        :param color_num: Size of color register
+        :param imageArray: A NumPy Array encoding the input image. To create one, use Converter.to_array(...)
+        :param verbose: Prints out encoding phase.
+        :return: A QuantumCircuit class, encoding the NEQR image
+        """
+
+        # PARAMETERS
+        if imageArray.shape[0] != imageArray.shape[1]:
+            raise Exception("Image array must be a square matrix")
+        size = imageArray.shape[1]
+        c_qb = color_num  # Size of color register
+        n_qb = int(math.ceil(math.log(size, 2)))  # Size of position registers
+        # REGISTERS
+        c = QuantumRegister(c_qb, "col")
+        x = QuantumRegister(n_qb, "x_coor")
+        y = QuantumRegister(n_qb, "y_coor")
+        anc = AncillaRegister(1, "anc")
+        pos = QuantumRegister(bits=qunion(x, y))  # Useful for mcx
+        qc = QuantumCircuit(c, y, x, anc, name="NEQR")
+        # ENCODING
+        # Initialize position registers
+        qc.x(x)
+        qc.x(y)
+        # First barrier
+        qc.barrier()
+        # Encoding colors
+        total = 2 ** (n_qb + n_qb)
+        val = 0
+        i = 1
+        while i <= total:
+            to_change = Circuit.__next_x(i, n_qb + n_qb - 1)
+            val = val ^ (2 ** to_change)  # XOR to get correct coordinate
+            x_index = (val >> 0) & (2 ** n_qb) - 1
+            y_index = (val >> n_qb)
+            pixel = imageArray[y_index][x_index]
+            # --debug--
+            if verbose:
+                print("Encoding %d at x:%d y:%d" % (pixel, x_index, y_index))
+            # Set barrier
+            qc.barrier()
+            # Set X-Gate
+            qc.x(pos[to_change])
+            # Set CX-Gate
+            qc.mcx(pos, anc)
+            for n in range(c_qb):
+                new_pixel = pixel >> (8 - color_num)  # THIS IS WHERE COLOR ENCODING CHANGES!
+                bit = (new_pixel >> n) & 1
+                if bit == 1:
+                    qc.mcx(anc, c[n])
+            qc.mcx(pos, anc)
+            # Increase counter
+            i += 1
+        # Set last barrier
+        qc.barrier()
+        # Reset coordinates
+        qc.x(x)
+        qc.x(y)
+        # RETURN
+        return qc
+
     # Cycle-Shift Module
     @staticmethod
     def __counter(size, reg_name='q', add=True, module_name="CNTR"):
@@ -453,7 +526,7 @@ class Circuit:
         It adds up the first two qubits (A and B) and the third (C), putting the SUM on q1 and the Cout on q2
         :return: A QuantumCircuit implementing the module
         """
-        circuit = QuantumCircuit(5, name="FA")
+        circuit = QuantumCircuit(5, name="HA")
         circuit.cx(2, 3)  # q3 = C
         circuit.cx(2, 4)  # q4 = C
         circuit.cx(0, 2)  # q2 = C XOR A
