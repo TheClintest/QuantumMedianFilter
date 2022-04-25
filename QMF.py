@@ -149,14 +149,47 @@ class ImagePatcher:
         for y in range(0, self.max_patch[0]):
             for x in range(0, self.max_patch[1]):
                 patch_pos = (y, x)
-                x_start = x + 1
-                y_start = y + 1
-                val_up = self.image[y_start - 1][x_start]
-                val_down = self.image[y_start + 1][x_start]
-                val_left = self.image[y_start][x_start - 1]
-                val_right = self.image[y_start][x_start + 1]
-                patch_image = np.array([[val_up, val_right],[val_left, val_down]])
+                x_start = x * 2
+                y_start = y * 2
+                x_end = x_start + 4
+                y_end = y_start + 4
+                patch_image = self.image[y_start:y_end, x_start:x_end]
                 res[patch_pos] = patch_image
+        return res
+
+    def convert_patches(self, patches: dict):
+        """
+        Converts a patch dictionary into the resulting array, according to image original shape
+        :param patches: A dictionary {pos : patch}
+        :return: A NumPy array encoding the image
+        """
+        res = self.image.copy()
+        for pos, patch in patches.items():
+            y_start = pos[0] * 2 + 1
+            x_start = pos[1] * 2 + 1
+            y_end = y_start + 2
+            x_end = x_start + 2
+            to_replace = patch[1:3, 1:3]
+            res[y_start:y_end, x_start:x_end] = to_replace
+        res = res[1:self.original_shape[0] + 1, 1:self.original_shape[1] + 1]
+        return res
+
+    def check_patch(self, a, b, tolerance):
+        for x in range(1, 3):
+            for y in range(1, 3):
+                val1 = int(a[y][x])
+                val2 = int(b[y][x])
+                res = abs(val2 - val1)
+                if res > tolerance:
+                    # print("CONVERGENCE %d/%d"%(res,tolerance))
+                    return False
+        return True
+
+    def converged_patches(self, old: dict, new: dict, epsilon):
+        res = dict()
+        positions = old.keys()
+        for pos in positions:
+            res[pos] = self.check_patch(old[pos], new[pos], epsilon)
         return res
 
 

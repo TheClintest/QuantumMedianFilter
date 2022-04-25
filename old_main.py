@@ -37,11 +37,6 @@ qasm_dir = "./qasm/"
 
 # IMAGE
 images = dict()
-images["TEST_2x2"] = "gray_2.png"
-images["TEST_4x4"] = "gray_4.png"
-images["TEST_8x8"] = "gray_8.png"
-images["GRAY_8x8"] = "gray_shade_8.png"
-images["CHAPLIN"] = "chaplin_64.png"
 filename = args[0]
 
 # CONVERSION
